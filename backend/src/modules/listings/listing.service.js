@@ -1,7 +1,9 @@
 import { listingRepository } from './listing.repository.js';
 import { assetRepository } from '../assets/asset.repository.js';
+import { User } from '../users/user.model.js';
 import { NotFoundError, ForbiddenError } from '../../common/errors/index.js';
 import { AssetStatus, ListingStatus } from '../../common/constants/asset-types.constant.js';
+import { KYCStatus } from '../kyc/kyc.constant.js';
 
 export class ListingService {
   constructor(repo = listingRepository, assetRepo = assetRepository) {
@@ -17,6 +19,17 @@ export class ListingService {
 
     if (asset.ownerId._id.toString() !== sellerId.toString()) {
       throw new ForbiddenError('You can only list assets that you own');
+    }
+
+    // High-trust listing verification check: Ensure seller identity is verified
+    const isHighTrust = data.isHighTrust || asset.metadata?.isHighTrust || data.price >= 5000;
+    if (isHighTrust) {
+      const seller = await User.findById(sellerId).select('kycStatus');
+      if (!seller || seller.kycStatus !== KYCStatus.VERIFIED) {
+        throw new ForbiddenError(
+          'Identity verification required: You must complete KYC verification before you can create high-trust asset listings.'
+        );
+      }
     }
 
     const listing = await this.repo.create({

@@ -36,9 +36,16 @@ const envSchema = z.object({
   // Logging
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
-  // Security
+  // Rate Limiting & Security
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(15 * 60 * 1000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
+
+  // KYC (Identity Verification)
+  KYC_PROVIDER: z.enum(['mock', 'external']).default('mock'),
+  KYC_ENCRYPTION_KEY: z.string().default('super_secret_kyc_aes_gcm_encryption_key_32_bytes_min!'),
+  KYC_EXPIRY_DAYS: z.coerce.number().default(365),
+  KYC_EXTERNAL_API_KEY: z.string().optional().default(''),
+  KYC_EXTERNAL_BASE_URL: z.string().optional().default('https://api.external-kyc-provider.com/v1'),
 });
 
 const parsed = envSchema.safeParse(process.env);

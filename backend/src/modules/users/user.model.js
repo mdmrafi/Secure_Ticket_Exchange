@@ -71,6 +71,17 @@ const userSchema = new mongoose.Schema(
       min: 0,
       max: 100,
     },
+    // KYC Summary State (Detailed PII & records are strictly stored in separate KYCRecord collection)
+    kycStatus: {
+      type: String,
+      enum: ['NOT_STARTED', 'PENDING', 'VERIFIED', 'REJECTED', 'EXPIRED', 'MANUAL_REVIEW'],
+      default: 'NOT_STARTED',
+      index: true,
+    },
+    kycVerifiedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

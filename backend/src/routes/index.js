@@ -9,6 +9,7 @@ import { verificationRoutes } from '../modules/verification/verification.routes.
 import { notificationRoutes } from '../modules/notifications/notification.routes.js';
 import { reportRoutes } from '../modules/reports/report.routes.js';
 import { adminRoutes } from '../modules/admin/admin.routes.js';
+import { kycRoutes } from '../modules/kyc/kyc.routes.js';
 
 const apiRouter = Router();
 
@@ -20,6 +21,7 @@ apiRouter.use('/assets', assetRoutes);
 apiRouter.use('/listings', listingRoutes);
 apiRouter.use('/transactions', transactionRoutes);
 apiRouter.use('/verification', verificationRoutes);
+apiRouter.use('/kyc', kycRoutes);
 apiRouter.use('/notifications', notificationRoutes);
 apiRouter.use('/reports', reportRoutes);
 apiRouter.use('/admin', adminRoutes);

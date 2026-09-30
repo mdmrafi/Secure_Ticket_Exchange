@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test:db": "node scripts/test-db-connection.js"
+    "test:db": "node scripts/test-db-connection.js",
+    "test:kyc": "node scripts/test-kyc-module.js"
   },
   "keywords": [
     "asset-exchange",
