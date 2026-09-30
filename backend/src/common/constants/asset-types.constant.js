@@ -37,11 +37,17 @@ export const TransactionStatus = {
 };
 
 export const VerificationStatus = {
+  UNVERIFIED: 'UNVERIFIED',
+  PROCESSING: 'PROCESSING',
+  VERIFIED: 'VERIFIED',
+  FAILED: 'FAILED',
+  SUSPICIOUS: 'SUSPICIOUS',
+  MANUAL_REVIEW: 'MANUAL_REVIEW',
+  // Backward compatibility aliases
   NOT_REQUESTED: 'NOT_REQUESTED',
   PENDING: 'PENDING',
   SUBMITTED: 'SUBMITTED',
   IN_REVIEW: 'IN_REVIEW',
   PASSED: 'PASSED',
-  FAILED: 'FAILED',
   FLAGGED: 'FLAGGED',
 };

@@ -10,7 +10,8 @@
     "test:db": "node scripts/test-db-connection.js",
     "test:kyc": "node scripts/test-kyc-module.js",
     "test:assets": "node scripts/test-asset-module.js",
-    "test:ingestion": "node scripts/test-ticket-ingestion.js"
+    "test:ingestion": "node scripts/test-ticket-ingestion.js",
+    "test:engine": "node scripts/test-verification-engine.js"
   },
   "keywords": [
     "asset-exchange",
