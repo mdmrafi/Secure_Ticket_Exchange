@@ -6,7 +6,7 @@ export class UserRepository {
   }
 
   async findByEmail(email) {
-    return User.findOne({ email }).select('+password');
+    return User.findOne({ email }).select('+passwordHash');
   }
 
   async findByExternalAuthId(externalAuthId) {

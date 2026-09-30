@@ -1,21 +1,49 @@
-/**
- * Auth Repository
- * Data access abstraction for session management, tokens, and credentials.
- */
+import { RefreshToken } from './refresh-token.model.js';
+
 export class AuthRepository {
-  async saveRefreshToken(userId, token, expiresAt) {
-    // Repository stub ready for persistent refresh token storage / Redis
-    return { userId, token, expiresAt };
+  /**
+   * Save a newly issued refresh token
+   */
+  async saveRefreshToken({ token, userId, expiresAt, createdByIp, userAgent }) {
+    return RefreshToken.create({
+      token,
+      userId,
+      expiresAt,
+      createdByIp,
+      userAgent,
+    });
   }
 
+  /**
+   * Find a refresh token by string
+   */
   async findRefreshToken(token) {
-    // Repository stub
-    return null;
+    return RefreshToken.findOne({ token }).populate('userId');
   }
 
-  async revokeRefreshToken(token) {
-    // Repository stub
-    return true;
+  /**
+   * Revoke a single refresh token with optional replacement pointer
+   */
+  async revokeRefreshToken(token, replacedByToken = null) {
+    return RefreshToken.findOneAndUpdate(
+      { token },
+      {
+        isRevoked: true,
+        revokedAt: new Date(),
+        ...(replacedByToken && { replacedByToken }),
+      },
+      { new: true }
+    );
+  }
+
+  /**
+   * Revoke all refresh tokens for a user (e.g. security reset or reuse detection)
+   */
+  async revokeAllUserTokens(userId) {
+    return RefreshToken.updateMany(
+      { userId, isRevoked: false },
+      { isRevoked: true, revokedAt: new Date() }
+    );
   }
 }
 

@@ -20,7 +20,10 @@ const envSchema = z.object({
   // Auth
   AUTH_PROVIDER: z.enum(['jwt', 'clerk']).default('jwt'),
   JWT_SECRET: z.string().min(8).default('super_secret_jwt_encryption_key_change_in_production_min_32_chars'),
-  JWT_EXPIRES_IN: z.string().default('7d'),
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_SECRET: z.string().min(8).default('super_secret_refresh_jwt_key_change_in_production_min_32_chars'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  JWT_EXPIRES_IN: z.string().default('15m'),
   JWT_COOKIE_EXPIRES_IN: z.coerce.number().default(7),
   CLERK_SECRET_KEY: z.string().optional().default(''),
   CLERK_PUBLISHABLE_KEY: z.string().optional().default(''),
