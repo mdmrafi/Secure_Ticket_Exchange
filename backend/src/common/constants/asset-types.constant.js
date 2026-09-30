@@ -37,6 +37,8 @@ export const TransactionStatus = {
 };
 
 export const VerificationStatus = {
+  NOT_REQUESTED: 'NOT_REQUESTED',
+  PENDING: 'PENDING',
   SUBMITTED: 'SUBMITTED',
   IN_REVIEW: 'IN_REVIEW',
   PASSED: 'PASSED',

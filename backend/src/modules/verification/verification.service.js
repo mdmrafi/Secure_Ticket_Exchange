@@ -3,6 +3,7 @@ import { assetRepository } from '../assets/asset.repository.js';
 import { inngest } from '../../config/inngest.config.js';
 import { NotFoundError } from '../../common/errors/index.js';
 import { AssetStatus, VerificationStatus } from '../../common/constants/asset-types.constant.js';
+import { getAssetVerifier } from './verifiers/asset-verifier.factory.js';
 
 export class VerificationService {
   constructor(repo = verificationRepository, assetRepo = assetRepository) {
@@ -24,6 +25,7 @@ export class VerificationService {
 
     await this.assetRepo.updateById(assetId, {
       status: AssetStatus.PENDING_VERIFICATION,
+      verificationStatus: VerificationStatus.SUBMITTED,
     });
 
     // Trigger Inngest async verification job
@@ -37,6 +39,22 @@ export class VerificationService {
     });
 
     return verification;
+  }
+
+  async runAssetVerification(assetId) {
+    const asset = await this.assetRepo.findById(assetId);
+    if (!asset) {
+      throw new NotFoundError('Asset not found');
+    }
+
+    const verifier = getAssetVerifier(asset.assetType);
+    const result = await verifier.verify(asset);
+
+    await this.assetRepo.updateById(assetId, {
+      verificationStatus: result.status,
+    });
+
+    return result;
   }
 
   async getVerificationStatus(assetId) {

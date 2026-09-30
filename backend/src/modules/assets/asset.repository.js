@@ -2,7 +2,7 @@ import { Asset } from './asset.model.js';
 
 export class AssetRepository {
   async findById(id) {
-    return Asset.findById(id).populate('ownerId', 'name email trustScore isVerified');
+    return Asset.findById(id).populate('ownerId', 'name email trustScore kycStatus');
   }
 
   async findByOwner(ownerId, filter = {}) {
@@ -21,10 +21,14 @@ export class AssetRepository {
     return Asset.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
   }
 
+  async deleteById(id) {
+    return Asset.findByIdAndDelete(id);
+  }
+
   async list(filter = {}, pagination = { skip: 0, limit: 20 }) {
     const [items, total] = await Promise.all([
       Asset.find(filter)
-        .populate('ownerId', 'name email trustScore')
+        .populate('ownerId', 'name email trustScore kycStatus')
         .skip(pagination.skip)
         .limit(pagination.limit)
         .sort({ createdAt: -1 }),

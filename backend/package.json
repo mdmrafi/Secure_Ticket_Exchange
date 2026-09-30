@@ -8,7 +8,9 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "test:db": "node scripts/test-db-connection.js",
-    "test:kyc": "node scripts/test-kyc-module.js"
+    "test:kyc": "node scripts/test-kyc-module.js",
+    "test:assets": "node scripts/test-asset-module.js",
+    "test:ingestion": "node scripts/test-ticket-ingestion.js"
   },
   "keywords": [
     "asset-exchange",
@@ -33,6 +35,7 @@
     "inngest": "^3.30.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.12.0",
+    "multer": "^2.4.0",
     "pino": "^9.6.0",
     "socket.io": "^4.8.1",
     "zod": "^3.24.2"
