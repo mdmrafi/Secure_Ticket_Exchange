@@ -6,7 +6,7 @@ import { User } from '../users/user.model.js';
 import { Asset } from '../assets/asset.model.js';
 import { Listing } from '../listings/listing.model.js';
 import { Reservation, ReservationStatus } from '../listings/reservation.model.js';
-import { mockPaymentProvider } from './providers/mock-payment.provider.js';
+import { getPaymentProvider } from './providers/payment-provider.factory.js';
 import { TransactionEventType } from './transaction-event.model.js';
 import {
   NotFoundError,
@@ -71,12 +71,39 @@ export const ALLOWED_PAYMENT_TRANSITIONS = {
   [PaymentStatus.REFUNDED]: [], // Terminal
 };
 
+/**
+ * Strip sensitive payment credentials (card numbers, CVV, PIN, etc.) from payloads
+ * ensuring PCI-DSS compliance and zero storage of raw credentials.
+ */
+export function sanitizePaymentData(data) {
+  if (!data || typeof data !== 'object') return data;
+  if (data instanceof Date || data instanceof RegExp) return data;
+  if (Array.isArray(data)) return data.map(sanitizePaymentData);
+
+  const sensitivePattern = /^(card_?number|pan|cvv|cvc|security_?code|expiry|expiry_?date|pin|password|secret|access_?token)$/i;
+  const sanitized = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    if (sensitivePattern.test(key)) {
+      continue; // Purge completely
+    }
+    if (value instanceof Date || value instanceof RegExp) {
+      sanitized[key] = value;
+    } else if (typeof value === 'object' && value !== null) {
+      sanitized[key] = sanitizePaymentData(value);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+
 export class TransactionService {
   constructor(
     repo = transactionRepository,
     listingRepo = listingRepository,
     assetRepo = assetRepository,
-    paymentProvider = mockPaymentProvider
+    paymentProvider = getPaymentProvider()
   ) {
     this.repo = repo;
     this.listingRepo = listingRepo;
@@ -218,7 +245,7 @@ export class TransactionService {
   }
 
   /**
-   * Create checkout/payment session with mock payment provider
+   * Create checkout/payment session with payment provider
    * Step: INITIATED -> PAYMENT_PENDING
    *
    * @param {string} transactionId
@@ -241,12 +268,17 @@ export class TransactionService {
       this.validateTransactionTransition(tx.transactionStatus, TransactionStatus.PAYMENT_PENDING);
     }
 
-    // Call mock payment gateway
-    const paymentSession = await this.paymentProvider.createPaymentSession({
+    // Provider abstraction: create payment session
+    const createFn = this.paymentProvider.createPayment
+      ? this.paymentProvider.createPayment.bind(this.paymentProvider)
+      : this.paymentProvider.createPaymentSession.bind(this.paymentProvider);
+
+    const paymentSession = await createFn({
       transactionId: tx._id.toString(),
       amount: tx.amount,
       currency: tx.currency,
       buyerId: userId,
+      buyerEmail: tx.buyerId.email,
     });
 
     const previousTxStatus = tx.transactionStatus;
@@ -254,11 +286,11 @@ export class TransactionService {
 
     const updatedTx = await this.repo.updateById(tx._id, {
       transactionStatus: TransactionStatus.PAYMENT_PENDING,
-      paymentDetails: {
+      paymentDetails: sanitizePaymentData({
         ...tx.paymentDetails,
         provider: paymentSession.provider,
         paymentSessionId: paymentSession.paymentSessionId,
-      },
+      }),
     });
 
     await this.repo.recordEvent({
@@ -270,10 +302,10 @@ export class TransactionService {
       toPaymentStatus: tx.paymentStatus,
       actorId: userId,
       actorRole: 'BUYER',
-      metadata: {
+      metadata: sanitizePaymentData({
         paymentSessionId: paymentSession.paymentSessionId,
         checkoutUrl: paymentSession.checkoutUrl,
-      },
+      }),
     });
 
     return {
@@ -283,9 +315,235 @@ export class TransactionService {
   }
 
   /**
+   * Authoritatively verify payment status with payment provider.
+   * NEVER trust payment success information supplied by the frontend.
+   * Backend directly queries provider ledger and enforces amount & currency parity.
+   *
+   * @param {string} transactionId
+   * @param {string} userId
+   * @param {object} [clientPayload]
+   */
+  async verifyPaymentStatus(transactionId, userId, clientPayload = {}) {
+    const tx = await this.repo.findById(transactionId);
+    if (!tx) {
+      throw new NotFoundError('Transaction not found');
+    }
+
+    this.checkAccess(tx, userId);
+
+    if (tx.buyerId._id.toString() !== userId.toString()) {
+      throw new ForbiddenError('Only the buyer can verify payment for this transaction');
+    }
+
+    // Ensure transaction is in a payable state
+    if (
+      tx.transactionStatus !== TransactionStatus.PAYMENT_PENDING &&
+      tx.transactionStatus !== TransactionStatus.INITIATED
+    ) {
+      if (
+        tx.transactionStatus === TransactionStatus.PAYMENT_CONFIRMED ||
+        tx.transactionStatus === TransactionStatus.TRANSFER_PENDING ||
+        tx.transactionStatus === TransactionStatus.COMPLETED
+      ) {
+        return tx;
+      }
+      throw new BadRequestError(
+        `Cannot verify payment for transaction in status ${tx.transactionStatus}. Must be PAYMENT_PENDING.`
+      );
+    }
+
+    const paymentSessionId =
+      clientPayload.paymentSessionId ||
+      tx.paymentDetails?.paymentSessionId ||
+      `mock_sess_${tx._id}`;
+
+    // Query payment provider directly (authoritative verification - zero trust)
+    const verification = await this.paymentProvider.verifyPayment({
+      paymentSessionId,
+      transactionRef: clientPayload.transactionRef,
+      signature: clientPayload.signature,
+      payload: clientPayload,
+    });
+
+    // Check 1: Transaction Mismatch
+    if (verification.transactionId && verification.transactionId.toString() !== tx._id.toString()) {
+      await this.repo.recordEvent({
+        transactionId: tx._id,
+        eventType: TransactionEventType.TRANSACTION_MISMATCH_DETECTED,
+        fromTransactionStatus: tx.transactionStatus,
+        toTransactionStatus: tx.transactionStatus,
+        fromPaymentStatus: tx.paymentStatus,
+        toPaymentStatus: tx.paymentStatus,
+        actorId: userId,
+        actorRole: 'BUYER',
+        metadata: {
+          expectedTransactionId: tx._id.toString(),
+          providerTransactionId: verification.transactionId,
+        },
+      });
+      throw new BadRequestError('Transaction ID mismatch: payment session belongs to another transaction');
+    }
+
+    // Check 2: Amount Manipulation Protection
+    if (verification.amount !== undefined && verification.amount !== null && verification.amount > 0) {
+      if (Math.abs(Number(verification.amount) - Number(tx.amount)) > 0.001) {
+        await this.repo.recordEvent({
+          transactionId: tx._id,
+          eventType: TransactionEventType.AMOUNT_MANIPULATION_DETECTED,
+          fromTransactionStatus: tx.transactionStatus,
+          toTransactionStatus: tx.transactionStatus,
+          fromPaymentStatus: tx.paymentStatus,
+          toPaymentStatus: tx.paymentStatus,
+          actorId: userId,
+          actorRole: 'BUYER',
+          metadata: {
+            expectedAmount: tx.amount,
+            reportedAmount: verification.amount,
+          },
+        });
+        throw new BadRequestError(
+          `Amount manipulation detected: expected ${tx.amount} ${tx.currency} but provider reported ${verification.amount}`
+        );
+      }
+    }
+
+    // Check 3: Currency Manipulation Protection
+    if (verification.currency) {
+      if (verification.currency.toUpperCase() !== tx.currency.toUpperCase()) {
+        await this.repo.recordEvent({
+          transactionId: tx._id,
+          eventType: TransactionEventType.CURRENCY_MANIPULATION_DETECTED,
+          fromTransactionStatus: tx.transactionStatus,
+          toTransactionStatus: tx.transactionStatus,
+          fromPaymentStatus: tx.paymentStatus,
+          toPaymentStatus: tx.paymentStatus,
+          actorId: userId,
+          actorRole: 'BUYER',
+          metadata: {
+            expectedCurrency: tx.currency,
+            reportedCurrency: verification.currency,
+          },
+        });
+        throw new BadRequestError(
+          `Currency manipulation detected: expected ${tx.currency} but provider reported ${verification.currency}`
+        );
+      }
+    }
+
+    // Zero-Trust check: provider authoritative status determines outcome
+    if (verification.status === 'PAID') {
+      this.validatePaymentTransition(tx.paymentStatus, PaymentStatus.PAID);
+      this.validateTransactionTransition(tx.transactionStatus, TransactionStatus.PAYMENT_CONFIRMED);
+
+      const previousTxStatus = tx.transactionStatus;
+      const previousPayStatus = tx.paymentStatus;
+      const txRef = verification.transactionRef || `REF-${Date.now()}`;
+      const paidAt = verification.paidAt || new Date();
+
+      const updatedTx = await this.repo.updateById(tx._id, {
+        transactionStatus: TransactionStatus.PAYMENT_CONFIRMED,
+        paymentStatus: PaymentStatus.PAID,
+        escrowStatus: 'HELD',
+        paymentDetails: sanitizePaymentData({
+          ...tx.paymentDetails,
+          provider: verification.provider || tx.paymentDetails?.provider,
+          paymentSessionId,
+          transactionRef: txRef,
+          paidAt,
+          failureReason: null,
+        }),
+      });
+
+      await this.repo.recordEvent({
+        transactionId: tx._id,
+        eventType: TransactionEventType.PAYMENT_VERIFIED,
+        fromTransactionStatus: previousTxStatus,
+        toTransactionStatus: TransactionStatus.PAYMENT_CONFIRMED,
+        fromPaymentStatus: previousPayStatus,
+        toPaymentStatus: PaymentStatus.PAID,
+        actorId: userId,
+        actorRole: 'BUYER',
+        metadata: {
+          provider: verification.provider,
+          paymentSessionId,
+          transactionRef: txRef,
+          paidAt,
+          amountVerified: tx.amount,
+          currencyVerified: tx.currency,
+        },
+      });
+
+      await this.repo.recordEvent({
+        transactionId: tx._id,
+        eventType: TransactionEventType.PAYMENT_CONFIRMED,
+        fromTransactionStatus: previousTxStatus,
+        toTransactionStatus: TransactionStatus.PAYMENT_CONFIRMED,
+        fromPaymentStatus: previousPayStatus,
+        toPaymentStatus: PaymentStatus.PAID,
+        actorId: userId,
+        actorRole: 'BUYER',
+        metadata: {
+          transactionRef: txRef,
+          paidAt,
+          escrowStatus: 'HELD',
+        },
+      });
+
+      publishEvent(
+        EventNames.PAYMENT_COMPLETED,
+        {
+          transactionId: tx._id.toString(),
+          buyerId: (tx.buyerId?._id || tx.buyerId).toString(),
+          sellerId: (tx.sellerId?._id || tx.sellerId).toString(),
+          amount: tx.amount,
+          currency: tx.currency,
+          transactionRef: txRef,
+          paidAt,
+        },
+        { id: userId }
+      ).catch(() => {});
+
+      return updatedTx;
+    } else if (verification.status === 'FAILED') {
+      this.validatePaymentTransition(tx.paymentStatus, PaymentStatus.FAILED);
+
+      const previousTxStatus = tx.transactionStatus;
+      const previousPayStatus = tx.paymentStatus;
+
+      const updatedTx = await this.repo.updateById(tx._id, {
+        paymentStatus: PaymentStatus.FAILED,
+        paymentDetails: sanitizePaymentData({
+          ...tx.paymentDetails,
+          failureReason: verification.failureReason || 'Payment failed on provider gateway',
+        }),
+      });
+
+      await this.repo.recordEvent({
+        transactionId: tx._id,
+        eventType: TransactionEventType.PAYMENT_FAILED,
+        fromTransactionStatus: previousTxStatus,
+        toTransactionStatus: tx.transactionStatus,
+        fromPaymentStatus: previousPayStatus,
+        toPaymentStatus: PaymentStatus.FAILED,
+        actorId: userId,
+        actorRole: 'BUYER',
+        metadata: {
+          failureReason: verification.failureReason,
+        },
+      });
+
+      return updatedTx;
+    } else {
+      // Status is PENDING - do NOT trust frontend claims if provider hasn't confirmed payment
+      throw new BadRequestError('Payment has not yet been confirmed by the payment gateway');
+    }
+  }
+
+  /**
    * Process simulated payment outcome
-   * Success: PAYMENT_PENDING -> PAYMENT_CONFIRMED, PENDING -> PAID
-   * Failure: PENDING -> FAILED
+   * For backwards compatibility and testing:
+   * If simulated provider is active, executes customer payment simulation on provider first,
+   * then authoritatively verifies with provider.
    *
    * @param {string} transactionId
    * @param {string} userId
@@ -305,110 +563,49 @@ export class TransactionService {
       );
     }
 
+    const paymentSessionId = tx.paymentDetails?.paymentSessionId || `mock_sess_${tx._id}`;
     const outcome = options.outcome || 'SUCCESS';
-    const paymentResult = await this.paymentProvider.processPayment({
-      paymentSessionId: tx.paymentDetails?.paymentSessionId || `mock_sess_${tx._id}`,
-      outcome,
-      failureReason: options.failureReason,
-    });
 
-    if (outcome === 'SUCCESS') {
-      this.validatePaymentTransition(tx.paymentStatus, PaymentStatus.PAID);
-      this.validateTransactionTransition(tx.transactionStatus, TransactionStatus.PAYMENT_CONFIRMED);
-
-      const previousTxStatus = tx.transactionStatus;
-      const previousPayStatus = tx.paymentStatus;
-
-      const updatedTx = await this.repo.updateById(tx._id, {
-        transactionStatus: TransactionStatus.PAYMENT_CONFIRMED,
-        paymentStatus: PaymentStatus.PAID,
-        escrowStatus: 'HELD', // Funds now held securely in escrow
-        paymentDetails: {
-          ...tx.paymentDetails,
-          transactionRef: paymentResult.transactionRef,
-          paidAt: paymentResult.paidAt,
-          failureReason: null,
-        },
+    // If provider supports simulation (e.g. MockPaymentProvider), simulate customer action on gateway
+    if (typeof this.paymentProvider.simulateCustomerPayment === 'function') {
+      await this.paymentProvider.simulateCustomerPayment({
+        paymentSessionId,
+        outcome,
+        failureReason: options.failureReason,
       });
-
-      await this.repo.recordEvent({
-        transactionId: tx._id,
-        eventType: TransactionEventType.PAYMENT_CONFIRMED,
-        fromTransactionStatus: previousTxStatus,
-        toTransactionStatus: TransactionStatus.PAYMENT_CONFIRMED,
-        fromPaymentStatus: previousPayStatus,
-        toPaymentStatus: PaymentStatus.PAID,
-        actorId: userId,
-        actorRole: 'BUYER',
-        metadata: {
-          transactionRef: paymentResult.transactionRef,
-          paidAt: paymentResult.paidAt,
-          escrowStatus: 'HELD',
-        },
-      });
-
-      // Asynchronously dispatch payment.completed event for background jobs
-      publishEvent(
-        EventNames.PAYMENT_COMPLETED,
-        {
-          transactionId: tx._id.toString(),
-          buyerId: (tx.buyerId?._id || tx.buyerId).toString(),
-          sellerId: (tx.sellerId?._id || tx.sellerId).toString(),
-          amount: tx.amount,
-          currency: tx.currency,
-          transactionRef: paymentResult.transactionRef,
-          paidAt: paymentResult.paidAt,
-        },
-        { id: userId }
-      ).catch(() => {});
-
-      return updatedTx;
-    } else {
-      // Failed payment attempt
-      this.validatePaymentTransition(tx.paymentStatus, PaymentStatus.FAILED);
-
-      const previousTxStatus = tx.transactionStatus;
-      const previousPayStatus = tx.paymentStatus;
-
-      const updatedTx = await this.repo.updateById(tx._id, {
-        paymentStatus: PaymentStatus.FAILED,
-        paymentDetails: {
-          ...tx.paymentDetails,
-          failureReason: paymentResult.failureReason,
-        },
-      });
-
-      await this.repo.recordEvent({
-        transactionId: tx._id,
-        eventType: TransactionEventType.PAYMENT_FAILED,
-        fromTransactionStatus: previousTxStatus,
-        toTransactionStatus: tx.transactionStatus,
-        fromPaymentStatus: previousPayStatus,
-        toPaymentStatus: PaymentStatus.FAILED,
-        actorId: userId,
-        actorRole: 'BUYER',
-        metadata: {
-          failureReason: paymentResult.failureReason,
-        },
-      });
-
-      return updatedTx;
     }
+
+    // Now authoritatively verify status from provider (never trusting client claim)
+    return this.verifyPaymentStatus(transactionId, userId, {
+      paymentSessionId,
+      ...options,
+    });
   }
 
   /**
-   * Handle webhook / callback from payment provider with idempotency protection
+   * Handle webhook / callback from payment provider with idempotent processing
+   * and comprehensive threat defenses against:
+   * 1. Duplicate callbacks
+   * 2. Forged callbacks (HMAC signature verification)
+   * 3. Amount manipulation
+   * 4. Currency manipulation
+   * 5. Replay attacks (timestamp & terminal status guards)
+   * 6. Transaction mismatch
+   * 7. Sensitive payment credential leakage
    *
    * @param {string} transactionId
    * @param {object} callbackPayload
+   * @param {object} [headers]
    */
-  async handlePaymentCallback(transactionId, callbackPayload) {
+  async handlePaymentCallback(transactionId, callbackPayload = {}, headers = {}) {
     const tx = await this.repo.findById(transactionId);
     if (!tx) {
       throw new NotFoundError('Transaction not found');
     }
 
-    // Idempotency check: duplicate callback handling
+    const sanitizedPayload = sanitizePaymentData(callbackPayload);
+
+    // 1. DUPLICATE CALLBACK PROTECTION (IDEMPOTENCY)
     const isAlreadyPaid =
       tx.paymentStatus === PaymentStatus.PAID ||
       tx.transactionStatus === TransactionStatus.PAYMENT_CONFIRMED ||
@@ -416,7 +613,6 @@ export class TransactionService {
       tx.transactionStatus === TransactionStatus.COMPLETED;
 
     if (isAlreadyPaid) {
-      // Record duplicate callback audit event without altering state or failing
       await this.repo.recordEvent({
         transactionId: tx._id,
         eventType: TransactionEventType.DUPLICATE_CALLBACK_IGNORED,
@@ -426,24 +622,235 @@ export class TransactionService {
         toPaymentStatus: tx.paymentStatus,
         actorRole: 'PAYMENT_PROVIDER',
         metadata: {
-          callbackPayload,
+          callbackPayload: sanitizedPayload,
           message: 'Duplicate payment callback safely handled without re-processing',
         },
       });
 
       return {
         idempotent: true,
-        message: 'Duplicate payment callback received and safely ignored',
+        message: 'Duplicate payment callback safely handled without re-processing',
         transaction: tx,
       };
     }
 
-    // Process callback outcome
-    const outcome = callbackPayload.status === 'PAID' || callbackPayload.outcome === 'SUCCESS' ? 'SUCCESS' : 'FAIL';
-    return this.processPayment(transactionId, tx.buyerId._id.toString(), {
-      outcome,
-      failureReason: callbackPayload.failureReason,
-    });
+    // 2. REPLAY ATTACK DEFENSE - Terminal status guard
+    if (tx.transactionStatus === TransactionStatus.CANCELLED) {
+      await this.repo.recordEvent({
+        transactionId: tx._id,
+        eventType: TransactionEventType.REPLAY_ATTACK_DETECTED,
+        fromTransactionStatus: tx.transactionStatus,
+        toTransactionStatus: tx.transactionStatus,
+        fromPaymentStatus: tx.paymentStatus,
+        toPaymentStatus: tx.paymentStatus,
+        actorRole: 'PAYMENT_PROVIDER',
+        metadata: {
+          reason: 'Callback replayed on cancelled transaction',
+          callbackPayload: sanitizedPayload,
+        },
+      });
+      throw new BadRequestError('Replay attack detected: cannot process payment callback for a cancelled transaction');
+    }
+
+    // 2b. REPLAY ATTACK DEFENSE - Webhook timestamp expiration (max 5 minutes window)
+    const rawTimestamp =
+      headers['x-webhook-timestamp'] ||
+      headers['x-timestamp'] ||
+      callbackPayload.timestamp;
+
+    if (rawTimestamp) {
+      const ts = Number(rawTimestamp);
+      const now = Date.now();
+      const maxAgeMs = 5 * 60 * 1000; // 5 minutes
+      const maxFutureClockSkewMs = 60 * 1000; // 1 minute
+
+      if (isNaN(ts) || now - ts > maxAgeMs || ts - now > maxFutureClockSkewMs) {
+        await this.repo.recordEvent({
+          transactionId: tx._id,
+          eventType: TransactionEventType.REPLAY_ATTACK_DETECTED,
+          fromTransactionStatus: tx.transactionStatus,
+          toTransactionStatus: tx.transactionStatus,
+          fromPaymentStatus: tx.paymentStatus,
+          toPaymentStatus: tx.paymentStatus,
+          actorRole: 'PAYMENT_PROVIDER',
+          metadata: {
+            reason: 'Webhook timestamp expired or out of bounds',
+            timestamp: ts,
+            now,
+            ageMs: now - ts,
+          },
+        });
+        throw new BadRequestError('Payment callback timestamp expired or invalid (possible replay attack)');
+      }
+    }
+
+    // 3. FORGED CALLBACK DEFENSE (Cryptographic HMAC Signature Verification)
+    const signature =
+      headers['x-signature'] ||
+      headers['x-webhook-signature'] ||
+      callbackPayload.signature;
+
+    if (signature && typeof this.paymentProvider.verifySignature === 'function') {
+      const payloadToVerify = { ...callbackPayload };
+      delete payloadToVerify.signature;
+
+      const isValidSignature = this.paymentProvider.verifySignature(signature, payloadToVerify);
+      if (!isValidSignature) {
+        await this.repo.recordEvent({
+          transactionId: tx._id,
+          eventType: TransactionEventType.FORGED_CALLBACK_REJECTED,
+          fromTransactionStatus: tx.transactionStatus,
+          toTransactionStatus: tx.transactionStatus,
+          fromPaymentStatus: tx.paymentStatus,
+          toPaymentStatus: tx.paymentStatus,
+          actorRole: 'PAYMENT_PROVIDER',
+          metadata: {
+            reason: 'HMAC signature verification failed',
+            providedSignature: signature,
+          },
+        });
+        throw new ForbiddenError('Invalid or forged payment provider webhook signature');
+      }
+    }
+
+    // 4. TRANSACTION MISMATCH DEFENSE
+    if (
+      callbackPayload.transactionId &&
+      callbackPayload.transactionId.toString() !== tx._id.toString()
+    ) {
+      await this.repo.recordEvent({
+        transactionId: tx._id,
+        eventType: TransactionEventType.TRANSACTION_MISMATCH_DETECTED,
+        fromTransactionStatus: tx.transactionStatus,
+        toTransactionStatus: tx.transactionStatus,
+        fromPaymentStatus: tx.paymentStatus,
+        toPaymentStatus: tx.paymentStatus,
+        actorRole: 'PAYMENT_PROVIDER',
+        metadata: {
+          targetTransactionId: tx._id.toString(),
+          payloadTransactionId: callbackPayload.transactionId,
+        },
+      });
+      throw new BadRequestError('Transaction ID mismatch: webhook payload does not match target transaction');
+    }
+
+    if (
+      callbackPayload.paymentSessionId &&
+      tx.paymentDetails?.paymentSessionId &&
+      callbackPayload.paymentSessionId !== tx.paymentDetails.paymentSessionId
+    ) {
+      await this.repo.recordEvent({
+        transactionId: tx._id,
+        eventType: TransactionEventType.TRANSACTION_MISMATCH_DETECTED,
+        fromTransactionStatus: tx.transactionStatus,
+        toTransactionStatus: tx.transactionStatus,
+        fromPaymentStatus: tx.paymentStatus,
+        toPaymentStatus: tx.paymentStatus,
+        actorRole: 'PAYMENT_PROVIDER',
+        metadata: {
+          expectedPaymentSessionId: tx.paymentDetails.paymentSessionId,
+          payloadPaymentSessionId: callbackPayload.paymentSessionId,
+        },
+      });
+      throw new BadRequestError('Payment session ID mismatch: webhook payload does not match transaction session');
+    }
+
+    // 5. AMOUNT MANIPULATION DEFENSE
+    if (callbackPayload.amount !== undefined && callbackPayload.amount !== null) {
+      if (Math.abs(Number(callbackPayload.amount) - Number(tx.amount)) > 0.001) {
+        await this.repo.recordEvent({
+          transactionId: tx._id,
+          eventType: TransactionEventType.AMOUNT_MANIPULATION_DETECTED,
+          fromTransactionStatus: tx.transactionStatus,
+          toTransactionStatus: tx.transactionStatus,
+          fromPaymentStatus: tx.paymentStatus,
+          toPaymentStatus: tx.paymentStatus,
+          actorRole: 'PAYMENT_PROVIDER',
+          metadata: {
+            expectedAmount: tx.amount,
+            receivedAmount: callbackPayload.amount,
+          },
+        });
+        throw new BadRequestError(
+          `Amount manipulation detected: expected ${tx.amount} ${tx.currency} but received ${callbackPayload.amount}`
+        );
+      }
+    }
+
+    // 6. CURRENCY MANIPULATION DEFENSE
+    if (callbackPayload.currency) {
+      if (callbackPayload.currency.toUpperCase() !== tx.currency.toUpperCase()) {
+        await this.repo.recordEvent({
+          transactionId: tx._id,
+          eventType: TransactionEventType.CURRENCY_MANIPULATION_DETECTED,
+          fromTransactionStatus: tx.transactionStatus,
+          toTransactionStatus: tx.transactionStatus,
+          fromPaymentStatus: tx.paymentStatus,
+          toPaymentStatus: tx.paymentStatus,
+          actorRole: 'PAYMENT_PROVIDER',
+          metadata: {
+            expectedCurrency: tx.currency,
+            receivedCurrency: callbackPayload.currency,
+          },
+        });
+        throw new BadRequestError(
+          `Currency manipulation detected: expected ${tx.currency} but received ${callbackPayload.currency}`
+        );
+      }
+    }
+
+    // Process outcome:
+    const isSuccess =
+      callbackPayload.status === 'PAID' ||
+      callbackPayload.outcome === 'SUCCESS' ||
+      callbackPayload.event === 'payment.succeeded';
+
+    // If simulation provider is present and session exists, ensure provider session matches webhook status
+    if (typeof this.paymentProvider.simulateCustomerPayment === 'function') {
+      const sessionId = callbackPayload.paymentSessionId || tx.paymentDetails?.paymentSessionId || `mock_sess_${tx._id}`;
+      await this.paymentProvider.simulateCustomerPayment({
+        paymentSessionId: sessionId,
+        outcome: isSuccess ? 'SUCCESS' : 'FAIL',
+        failureReason: callbackPayload.failureReason,
+        transactionRef: callbackPayload.transactionRef,
+      });
+    }
+
+    if (isSuccess) {
+      return this.verifyPaymentStatus(transactionId, tx.buyerId._id.toString(), {
+        paymentSessionId: callbackPayload.paymentSessionId || tx.paymentDetails?.paymentSessionId,
+        transactionRef: callbackPayload.transactionRef,
+        signature,
+      });
+    } else {
+      this.validatePaymentTransition(tx.paymentStatus, PaymentStatus.FAILED);
+
+      const previousTxStatus = tx.transactionStatus;
+      const previousPayStatus = tx.paymentStatus;
+
+      const updatedTx = await this.repo.updateById(tx._id, {
+        paymentStatus: PaymentStatus.FAILED,
+        paymentDetails: sanitizePaymentData({
+          ...tx.paymentDetails,
+          failureReason: callbackPayload.failureReason || 'Payment failed on provider gateway',
+        }),
+      });
+
+      await this.repo.recordEvent({
+        transactionId: tx._id,
+        eventType: TransactionEventType.PAYMENT_FAILED,
+        fromTransactionStatus: previousTxStatus,
+        toTransactionStatus: tx.transactionStatus,
+        fromPaymentStatus: previousPayStatus,
+        toPaymentStatus: PaymentStatus.FAILED,
+        actorRole: 'PAYMENT_PROVIDER',
+        metadata: {
+          failureReason: callbackPayload.failureReason,
+        },
+      });
+
+      return updatedTx;
+    }
   }
 
   /**

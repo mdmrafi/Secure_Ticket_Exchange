@@ -5,6 +5,7 @@ import { validate } from '../../common/middlewares/validate.middleware.js';
 import {
   initiateTransactionSchema,
   transactionIdParamSchema,
+  verifyPaymentSchema,
   processPaymentSchema,
   paymentCallbackSchema,
   cancelTransactionSchema,
@@ -32,6 +33,11 @@ router.get('/:id', validate(transactionIdParamSchema), transactionController.get
 router.get('/:id/events', validate(transactionIdParamSchema), transactionController.getEvents);
 
 router.post('/:id/pay', validate(transactionIdParamSchema), transactionController.createPaymentSession);
+router.post(
+  '/:id/verify',
+  validate(verifyPaymentSchema),
+  transactionController.verifyPayment
+);
 router.post(
   '/:id/process-payment',
   validate(processPaymentSchema),

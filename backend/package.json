@@ -21,7 +21,8 @@
     "test:jobs": "node scripts/test-inngest-jobs.js",
     "test:inngest": "node scripts/test-inngest-jobs.js",
     "test:admin": "node scripts/test-admin-moderation.js",
-    "test:security": "node scripts/test-security-hardening.js"
+    "test:security": "node scripts/test-security-hardening.js",
+    "test:payment": "node scripts/test-payment-abstraction.js"
   },
 
   "keywords": [

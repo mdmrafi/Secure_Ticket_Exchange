@@ -32,6 +32,19 @@ export class TransactionController {
   });
 
   /**
+   * Authoritatively verify payment status with payment provider
+   * POST /api/v1/transactions/:id/verify
+   */
+  verifyPayment = asyncHandler(async (req, res) => {
+    const transaction = await this.service.verifyPaymentStatus(
+      req.params.id,
+      req.user.userId,
+      req.body
+    );
+    return ApiResponse.success(res, transaction, 'Payment status authoritatively verified');
+  });
+
+  /**
    * Process simulated payment
    * POST /api/v1/transactions/:id/process-payment
    */
@@ -45,13 +58,14 @@ export class TransactionController {
   });
 
   /**
-   * Payment provider webhook / callback with idempotency
+   * Payment provider webhook / callback with idempotency and threat defenses
    * POST /api/v1/transactions/:id/callback
    */
   callback = asyncHandler(async (req, res) => {
     const result = await this.service.handlePaymentCallback(
       req.params.id,
-      req.body
+      req.body,
+      req.headers
     );
     return ApiResponse.success(res, result, 'Payment callback received');
   });

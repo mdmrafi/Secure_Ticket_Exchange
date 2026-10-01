@@ -12,6 +12,20 @@ export const transactionIdParamSchema = z.object({
   }),
 });
 
+export const verifyPaymentSchema = z.object({
+  params: z.object({
+    id: z.string().min(1, 'Transaction ID is required'),
+  }),
+  body: z
+    .object({
+      paymentSessionId: z.string().optional(),
+      transactionRef: z.string().optional(),
+      signature: z.string().optional(),
+    })
+    .passthrough()
+    .optional(),
+});
+
 export const processPaymentSchema = z.object({
   params: z.object({
     id: z.string().min(1, 'Transaction ID is required'),
@@ -33,7 +47,7 @@ export const paymentCallbackSchema = z.object({
       status: z.string().optional(),
       outcome: z.string().optional(),
       transactionRef: z.string().optional(),
-      failureReason: z.string().optional(),
+      failureReason: z.string().nullable().optional(),
     })
     .passthrough(),
 });

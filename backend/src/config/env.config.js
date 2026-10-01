@@ -33,6 +33,10 @@ const envSchema = z.object({
   INNGEST_SIGNING_KEY: z.string().optional().default(''),
   INNGEST_APP_ID: z.string().default('secure-asset-exchange'),
 
+  // Payment Gateway
+  PAYMENT_PROVIDER: z.enum(['mock', 'stripe', 'sslcommerz']).default('mock'),
+  PAYMENT_WEBHOOK_SECRET: z.string().default('mock_payment_webhook_secret_key_32_bytes_min_exchange'),
+
   // Logging
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
