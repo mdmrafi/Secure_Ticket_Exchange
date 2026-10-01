@@ -5,9 +5,7 @@ import { mockPaymentProvider } from './mock-payment.provider.js';
  * Payment Provider Registry
  * Allows plugging in real payment providers (e.g. Stripe, SSLCommerz, bKash, PayPal)
  */
-const providerRegistry = new Map([
-  ['mock', mockPaymentProvider],
-]);
+const providerRegistry = new Map([['mock', mockPaymentProvider]]);
 
 /**
  * Register a new payment provider adapter

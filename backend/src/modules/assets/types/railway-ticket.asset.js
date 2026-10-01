@@ -62,7 +62,9 @@ export class RailwayTicket extends BaseAsset {
   get seat() {
     return (
       this.metadata?.seat ||
-      (Array.isArray(this.metadata?.seats) ? this.metadata.seats.join(', ') : this.metadata?.seats) ||
+      (Array.isArray(this.metadata?.seats)
+        ? this.metadata.seats.join(', ')
+        : this.metadata?.seats) ||
       null
     );
   }

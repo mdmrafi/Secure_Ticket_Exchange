@@ -72,7 +72,9 @@ function assert(condition, testName, details = '') {
 }
 
 async function runTests() {
-  console.log(`\n${colors.bold}${colors.cyan}======================================================`);
+  console.log(
+    `\n${colors.bold}${colors.cyan}======================================================`
+  );
   console.log(`     PRODUCTION IDENTITY VERIFICATION (KYC) TEST SUITE`);
   console.log(`======================================================${colors.reset}\n`);
   console.log(`Target API URL: ${BASE_URL}\n`);
@@ -146,19 +148,19 @@ async function runTests() {
     // -----------------------------------------------------------------
     // TEST 2: Starting KYC (POST /api/v1/kyc/start)
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 2: Starting KYC Session (POST /kyc/start)${colors.reset}`);
-    const startRes = await apiCall(
-      '/kyc/start',
-      'POST',
-      { documentType: 'NATIONAL_ID' },
-      tokenA
+    console.log(
+      `\n${colors.bold}Scenario 2: Starting KYC Session (POST /kyc/start)${colors.reset}`
     );
+    const startRes = await apiCall('/kyc/start', 'POST', { documentType: 'NATIONAL_ID' }, tokenA);
 
     assert(startRes.status === 201, 'POST /kyc/start returns 201 Created');
     assert(startRes.body?.success === true, 'Response payload marked success: true');
     assert(startRes.body?.data?.status === 'PENDING', 'KYC status transitioned to PENDING');
     assert(startRes.body?.data?.provider === 'mock', 'Provider is registered mock KYC provider');
-    assert(Boolean(startRes.body?.data?.providerReferenceId), 'Provider reference inquiry ID generated');
+    assert(
+      Boolean(startRes.body?.data?.providerReferenceId),
+      'Provider reference inquiry ID generated'
+    );
     assert(Boolean(startRes.body?.data?.startedAt), 'startedAt timestamp correctly populated');
     assert(Boolean(startRes.body?.data?.providerSession), 'Provider session instructions provided');
 
@@ -174,7 +176,9 @@ async function runTests() {
     // -----------------------------------------------------------------
     // TEST 3: Submitting Mock KYC & Successful Verification
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 3: Submitting Mock KYC & Successful Verification (POST /kyc/submit)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 3: Submitting Mock KYC & Successful Verification (POST /kyc/submit)${colors.reset}`
+    );
     const submitPayload = {
       documentType: 'NATIONAL_ID',
       syntheticData: {
@@ -194,7 +198,10 @@ async function runTests() {
     assert(Boolean(submitRes.body?.data?.verifiedAt), 'verifiedAt timestamp populated');
     assert(Boolean(submitRes.body?.data?.submittedAt), 'submittedAt timestamp populated');
     assert(Boolean(submitRes.body?.data?.expiresAt), 'expiresAt validity date calculated');
-    assert(submitRes.body?.data?.documentNumberMasked === '******3210', 'documentNumber is safely masked');
+    assert(
+      submitRes.body?.data?.documentNumberMasked === '******3210',
+      'documentNumber is safely masked'
+    );
 
     // Verify sensitive PII is NEVER exposed in the API response
     assert(
@@ -241,7 +248,9 @@ async function runTests() {
     // -----------------------------------------------------------------
     // TEST 4: Submitting Mock KYC with Rejection
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 4: Submitting Mock KYC with Rejection Outcome${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 4: Submitting Mock KYC with Rejection Outcome${colors.reset}`
+    );
     // Start KYC for User Charlie
     await apiCall('/kyc/start', 'POST', { documentType: 'PASSPORT' }, tokenReject);
 
@@ -306,7 +315,9 @@ async function runTests() {
     // -----------------------------------------------------------------
     // TEST 6: Access to Another User's KYC (Authorization Boundary)
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 6: Access to Another User's KYC Record (RBAC & Isolation)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 6: Access to Another User's KYC Record (RBAC & Isolation)${colors.reset}`
+    );
     // User B tries to view User A's KYC status by user ID
     const crossAccessRes = await apiCall(`/kyc/status/${userA._id}`, 'GET', null, tokenB);
     assert(
@@ -320,17 +331,11 @@ async function runTests() {
 
     // User A can access their own record
     const selfAccessRes = await apiCall(`/kyc/status/${userA._id}`, 'GET', null, tokenA);
-    assert(
-      selfAccessRes.status === 200,
-      'User A accessing own record by user ID returns 200 OK'
-    );
+    assert(selfAccessRes.status === 200, 'User A accessing own record by user ID returns 200 OK');
 
     // Admin CAN access User A's KYC status for verification/review operations
     const adminAccessRes = await apiCall(`/kyc/status/${userA._id}`, 'GET', null, tokenAdmin);
-    assert(
-      adminAccessRes.status === 200,
-      'ADMIN accessing User A KYC status authorized (200 OK)'
-    );
+    assert(adminAccessRes.status === 200, 'ADMIN accessing User A KYC status authorized (200 OK)');
     assert(
       adminAccessRes.body?.data?.status === 'VERIFIED',
       'Admin receives verified KYC overview'
@@ -339,7 +344,9 @@ async function runTests() {
     // -----------------------------------------------------------------
     // TEST 7: High-Trust Listing Guard Integration
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 7: High-Trust Asset Listing Creation Guard${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 7: High-Trust Asset Listing Creation Guard${colors.reset}`
+    );
     // Create test assets: Asset owned by User A (verified) and Asset owned by User B (unverified)
     const assetA = await Asset.create({
       ownerId: userA._id,
@@ -405,7 +412,9 @@ async function runTests() {
     await Asset.deleteMany({ _id: { $in: [assetA._id, assetB._id] } });
   } finally {
     // Clean up test records
-    console.log(`\n${colors.yellow}[CLEANUP] Cleaning up test users, KYC records, and audit logs...${colors.reset}`);
+    console.log(
+      `\n${colors.yellow}[CLEANUP] Cleaning up test users, KYC records, and audit logs...${colors.reset}`
+    );
     const testUserIds = [userA?._id, userB?._id, userReject?._id, userAdmin?._id].filter(Boolean);
     if (testUserIds.length > 0) {
       await User.deleteMany({ _id: { $in: testUserIds } });

@@ -7,10 +7,19 @@ import { User } from '../src/modules/users/user.model.js';
 import { Asset } from '../src/modules/assets/asset.model.js';
 import { Listing } from '../src/modules/listings/listing.model.js';
 import { Transaction } from '../src/modules/transactions/transaction.model.js';
-import { TransactionEvent, TransactionEventType } from '../src/modules/transactions/transaction-event.model.js';
+import {
+  TransactionEvent,
+  TransactionEventType,
+} from '../src/modules/transactions/transaction-event.model.js';
 import { PaymentProvider } from '../src/modules/transactions/providers/payment-provider.interface.js';
-import { MockPaymentProvider, mockPaymentProvider } from '../src/modules/transactions/providers/mock-payment.provider.js';
-import { getPaymentProvider, registerPaymentProvider } from '../src/modules/transactions/providers/payment-provider.factory.js';
+import {
+  MockPaymentProvider,
+  mockPaymentProvider,
+} from '../src/modules/transactions/providers/mock-payment.provider.js';
+import {
+  getPaymentProvider,
+  registerPaymentProvider,
+} from '../src/modules/transactions/providers/payment-provider.factory.js';
 import {
   AssetTypes,
   AssetStatus,
@@ -94,7 +103,9 @@ function assert(condition, testName, details = '') {
 }
 
 async function runPaymentAbstractionTests() {
-  console.log(`\n${colors.bold}${colors.cyan}======================================================`);
+  console.log(
+    `\n${colors.bold}${colors.cyan}======================================================`
+  );
   console.log(`  PAYMENT PROVIDER ABSTRACTION & SECURITY TEST SUITE`);
   console.log(`======================================================${colors.reset}\n`);
   console.log(`Target API URL: ${BASE_URL}\n`);
@@ -113,7 +124,9 @@ async function runPaymentAbstractionTests() {
     // =================================================================
     // Scenario 1: PaymentProvider Contract & Factory Extensibility
     // =================================================================
-    console.log(`${colors.bold}Scenario 1: PaymentProvider Interface & Pluggability Contract${colors.reset}`);
+    console.log(
+      `${colors.bold}Scenario 1: PaymentProvider Interface & Pluggability Contract${colors.reset}`
+    );
 
     // Verify PaymentProvider base class throws when un-implemented
     const baseProvider = new PaymentProvider();
@@ -173,7 +186,11 @@ async function runPaymentAbstractionTests() {
         return 'stripe-production';
       }
       async createPayment() {
-        return { provider: 'stripe-production', paymentSessionId: 'stripe_sess_123', status: 'PENDING' };
+        return {
+          provider: 'stripe-production',
+          paymentSessionId: 'stripe_sess_123',
+          status: 'PENDING',
+        };
       }
       async verifyPayment() {
         return { provider: 'stripe-production', status: 'PAID' };
@@ -199,7 +216,9 @@ async function runPaymentAbstractionTests() {
     // =================================================================
     // SETUP: Fixtures for API-Level Payment Security Tests
     // =================================================================
-    console.log(`\n${colors.yellow}[SETUP] Creating test users, assets, and listings...${colors.reset}`);
+    console.log(
+      `\n${colors.yellow}[SETUP] Creating test users, assets, and listings...${colors.reset}`
+    );
 
     const seller = await User.create({
       name: 'Payment Seller Bob',
@@ -260,10 +279,17 @@ async function runPaymentAbstractionTests() {
     // =================================================================
     // Scenario 2: Never Trust Frontend (Zero-Trust Verification)
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 2: Zero-Trust Frontend Payment Verification${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 2: Zero-Trust Frontend Payment Verification${colors.reset}`
+    );
 
     // Initiate transaction
-    const initRes = await apiCall('/transactions', 'POST', { listingId: item1.listing._id.toString() }, tokenBuyer);
+    const initRes = await apiCall(
+      '/transactions',
+      'POST',
+      { listingId: item1.listing._id.toString() },
+      tokenBuyer
+    );
     assert(initRes.status === 201, 'Transaction initiated successfully (201 Created)');
     const tx = initRes.body?.data;
     createdTransactionIds.push(tx._id);
@@ -287,7 +313,7 @@ async function runPaymentAbstractionTests() {
     );
     assert(
       fraudulentVerifyRes.body?.message?.includes('not yet been confirmed') ||
-      fraudulentVerifyRes.body?.message?.includes('gateway'),
+        fraudulentVerifyRes.body?.message?.includes('gateway'),
       'Backend explains payment has not been confirmed by authoritative gateway'
     );
 
@@ -319,7 +345,11 @@ async function runPaymentAbstractionTests() {
       null,
       validCallbackData.headers
     );
-    assert(webhookRes.status === 200, 'Authentic payment webhook verified and processed (200 OK)', JSON.stringify(webhookRes));
+    assert(
+      webhookRes.status === 200,
+      'Authentic payment webhook verified and processed (200 OK)',
+      JSON.stringify(webhookRes)
+    );
 
     // Now frontend queries /verify - backend confirms with provider that session is PAID
     const verifiedStatusRes = await apiCall(
@@ -347,7 +377,10 @@ async function runPaymentAbstractionTests() {
       transactionId: tx._id,
       eventType: TransactionEventType.PAYMENT_VERIFIED,
     });
-    assert(verifyEvents.length > 0, 'Immutable audit event PAYMENT_VERIFIED recorded in audit ledger');
+    assert(
+      verifyEvents.length > 0,
+      'Immutable audit event PAYMENT_VERIFIED recorded in audit ledger'
+    );
 
     // =================================================================
     // Scenario 3: Idempotent Payment Webhook Callbacks
@@ -383,9 +416,16 @@ async function runPaymentAbstractionTests() {
     // =================================================================
     // Scenario 4: Forged Webhook Callback Defense (HMAC Verification)
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 4: Forged Callback Defense (HMAC-SHA256 Signature)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 4: Forged Callback Defense (HMAC-SHA256 Signature)${colors.reset}`
+    );
 
-    const initRes2 = await apiCall('/transactions', 'POST', { listingId: item2.listing._id.toString() }, tokenBuyer);
+    const initRes2 = await apiCall(
+      '/transactions',
+      'POST',
+      { listingId: item2.listing._id.toString() },
+      tokenBuyer
+    );
     const tx2 = initRes2.body?.data;
     createdTransactionIds.push(tx2._id);
     await apiCall(`/transactions/${tx2._id}/pay`, 'POST', {}, tokenBuyer);
@@ -411,7 +451,7 @@ async function runPaymentAbstractionTests() {
     );
     assert(
       forgedWebhookRes.body?.message?.includes('signature') ||
-      forgedWebhookRes.body?.message?.includes('forged'),
+        forgedWebhookRes.body?.message?.includes('forged'),
       'Error message identifies signature verification failure'
     );
 
@@ -443,13 +483,10 @@ async function runPaymentAbstractionTests() {
       null,
       { 'x-signature': amountSig }
     );
-    assert(
-      amountManipRes.status === 400,
-      'Amount manipulation rejected with 400 Bad Request'
-    );
+    assert(amountManipRes.status === 400, 'Amount manipulation rejected with 400 Bad Request');
     assert(
       amountManipRes.body?.message?.includes('Amount manipulation') ||
-      amountManipRes.body?.message?.includes('amount mismatch'),
+        amountManipRes.body?.message?.includes('amount mismatch'),
       'Error message details amount mismatch between expected and received'
     );
 
@@ -481,13 +518,10 @@ async function runPaymentAbstractionTests() {
       null,
       { 'x-signature': currSig }
     );
-    assert(
-      currManipRes.status === 400,
-      'Currency manipulation rejected with 400 Bad Request'
-    );
+    assert(currManipRes.status === 400, 'Currency manipulation rejected with 400 Bad Request');
     assert(
       currManipRes.body?.message?.includes('Currency manipulation') ||
-      currManipRes.body?.message?.includes('currency mismatch'),
+        currManipRes.body?.message?.includes('currency mismatch'),
       'Error message details currency mismatch'
     );
 
@@ -503,12 +537,22 @@ async function runPaymentAbstractionTests() {
     console.log(`\n${colors.bold}Scenario 7: Replay Attack Defenses${colors.reset}`);
 
     // Sub-case 7A: Replaying a callback onto a CANCELLED transaction
-    const initRes3 = await apiCall('/transactions', 'POST', { listingId: item3.listing._id.toString() }, tokenBuyer);
+    const initRes3 = await apiCall(
+      '/transactions',
+      'POST',
+      { listingId: item3.listing._id.toString() },
+      tokenBuyer
+    );
     const tx3 = initRes3.body?.data;
     createdTransactionIds.push(tx3._id);
 
     // Cancel transaction
-    await apiCall(`/transactions/${tx3._id}/cancel`, 'POST', { reason: 'User cancelled' }, tokenBuyer);
+    await apiCall(
+      `/transactions/${tx3._id}/cancel`,
+      'POST',
+      { reason: 'User cancelled' },
+      tokenBuyer
+    );
 
     // Attempt to replay valid callback on cancelled transaction
     const replayPayload = {
@@ -532,7 +576,7 @@ async function runPaymentAbstractionTests() {
     );
     assert(
       replayRes.body?.message?.includes('Replay attack detected') ||
-      replayRes.body?.message?.includes('cancelled'),
+        replayRes.body?.message?.includes('cancelled'),
       'Error message identifies replay attack on cancelled transaction'
     );
 
@@ -569,7 +613,7 @@ async function runPaymentAbstractionTests() {
     );
     assert(
       staleRes.body?.message?.includes('timestamp expired') ||
-      staleRes.body?.message?.includes('replay'),
+        staleRes.body?.message?.includes('replay'),
       'Error message identifies expired timestamp'
     );
 
@@ -600,7 +644,7 @@ async function runPaymentAbstractionTests() {
     );
     assert(
       mismatchRes.body?.message?.includes('mismatch') ||
-      mismatchRes.body?.message?.includes('Transaction ID'),
+        mismatchRes.body?.message?.includes('Transaction ID'),
       'Error message identifies transaction mismatch'
     );
 
@@ -613,9 +657,16 @@ async function runPaymentAbstractionTests() {
     // =================================================================
     // Scenario 9: Sensitive Payment Credential Protection & Stripping
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 9: Sensitive Payment Credential Protection (Zero PAN/CVV Storage)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 9: Sensitive Payment Credential Protection (Zero PAN/CVV Storage)${colors.reset}`
+    );
 
-    const initRes4 = await apiCall('/transactions', 'POST', { listingId: item4.listing._id.toString() }, tokenBuyer);
+    const initRes4 = await apiCall(
+      '/transactions',
+      'POST',
+      { listingId: item4.listing._id.toString() },
+      tokenBuyer
+    );
     const tx4 = initRes4.body?.data;
     createdTransactionIds.push(tx4._id);
     await apiCall(`/transactions/${tx4._id}/pay`, 'POST', {}, tokenBuyer);
@@ -653,14 +704,26 @@ async function runPaymentAbstractionTests() {
     // Inspect database transaction document to confirm NO credentials stored
     const tx4InDb = await Transaction.findById(tx4._id).lean();
     const tx4String = JSON.stringify(tx4InDb);
-    assert(!tx4String.includes(rawPan), 'Database transaction document contains ZERO instances of raw card PAN');
-    assert(!tx4String.includes(rawCvv), 'Database transaction document contains ZERO instances of CVV');
-    assert(!tx4String.includes(rawPin), 'Database transaction document contains ZERO instances of PIN');
+    assert(
+      !tx4String.includes(rawPan),
+      'Database transaction document contains ZERO instances of raw card PAN'
+    );
+    assert(
+      !tx4String.includes(rawCvv),
+      'Database transaction document contains ZERO instances of CVV'
+    );
+    assert(
+      !tx4String.includes(rawPin),
+      'Database transaction document contains ZERO instances of PIN'
+    );
 
     // Inspect audit event logs to confirm NO credentials logged
     const allTx4Events = await TransactionEvent.find({ transactionId: tx4._id }).lean();
     const eventsString = JSON.stringify(allTx4Events);
-    assert(!eventsString.includes(rawPan), 'Audit event logs contain ZERO instances of raw card PAN');
+    assert(
+      !eventsString.includes(rawPan),
+      'Audit event logs contain ZERO instances of raw card PAN'
+    );
     assert(!eventsString.includes(rawCvv), 'Audit event logs contain ZERO instances of CVV');
     assert(!eventsString.includes(rawPin), 'Audit event logs contain ZERO instances of PIN');
 
@@ -681,10 +744,7 @@ async function runPaymentAbstractionTests() {
       cancelRes.body?.data?.paymentStatus === PaymentStatus.REFUNDED,
       'Transaction paymentStatus updated to REFUNDED'
     );
-    assert(
-      cancelRes.body?.data?.escrowStatus === 'REFUNDED',
-      'Escrow status updated to REFUNDED'
-    );
+    assert(cancelRes.body?.data?.escrowStatus === 'REFUNDED', 'Escrow status updated to REFUNDED');
 
     // Verify refund persisted in database
     const tx4InDbAfterCancel = await Transaction.findById(tx4._id);
@@ -708,11 +768,7 @@ async function runPaymentAbstractionTests() {
       directRefund.status === 'REFUNDED',
       'Payment provider refundPayment() returns status REFUNDED'
     );
-    assert(
-      directRefund.refundId != null,
-      'Payment provider generates unique refund identifier'
-    );
-
+    assert(directRefund.refundId != null, 'Payment provider generates unique refund identifier');
   } catch (error) {
     console.error(`\n${colors.red}[FATAL TEST RUNTIME ERROR]${colors.reset}`, error);
     failedCount++;
@@ -748,13 +804,17 @@ async function runPaymentAbstractionTests() {
   // =================================================================
   // SUMMARY
   // =================================================================
-  console.log(`${colors.bold}======================================================${colors.reset}`);
+  console.log(
+    `${colors.bold}======================================================${colors.reset}`
+  );
   console.log(
     `TEST SUMMARY: ${colors.green}${passedCount} passed${colors.reset}, ${
       failedCount > 0 ? colors.red : colors.reset
     }${failedCount} failed${colors.reset}`
   );
-  console.log(`${colors.bold}======================================================${colors.reset}\n`);
+  console.log(
+    `${colors.bold}======================================================${colors.reset}\n`
+  );
 
   if (failedCount > 0) {
     process.exit(1);

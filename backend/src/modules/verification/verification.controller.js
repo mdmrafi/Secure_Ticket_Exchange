@@ -12,7 +12,11 @@ export class VerificationController {
    * Queue or initiate verification request
    */
   requestVerification = asyncHandler(async (req, res) => {
-    const verification = await this.service.requestVerification(req.user.userId, req.body.assetId, req.body);
+    const verification = await this.service.requestVerification(
+      req.user.userId,
+      req.body.assetId,
+      req.body
+    );
     return ApiResponse.created(res, verification, 'Verification request initiated');
   });
 
@@ -21,20 +25,16 @@ export class VerificationController {
    * Run multi-layer VerificationEngine on a railway ticket
    */
   verifyRailway = asyncHandler(async (req, res) => {
-    const result = await this.service.verifyRailwayTicket(
-      req.params.assetId,
-      req.user,
-      req.body
-    );
+    const result = await this.service.verifyRailwayTicket(req.params.assetId, req.user, req.body);
 
     const message =
       result.status === 'VERIFIED'
         ? 'Railway ticket successfully verified across all signals'
         : result.status === 'SUSPICIOUS'
-        ? 'Warning: Suspicious signals or mismatch detected during verification'
-        : result.status === 'MANUAL_REVIEW'
-        ? 'Ticket routed to manual review fallback'
-        : 'Railway ticket verification failed';
+          ? 'Warning: Suspicious signals or mismatch detected during verification'
+          : result.status === 'MANUAL_REVIEW'
+            ? 'Ticket routed to manual review fallback'
+            : 'Railway ticket verification failed';
 
     return ApiResponse.success(res, result, message);
   });

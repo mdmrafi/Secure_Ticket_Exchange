@@ -74,9 +74,14 @@ export class DocumentProcessor {
     if (ocrConfidence < 30 || !rawText || ocrResult.metadata?.ocrOutcome === 'FAILED') {
       extractionStatus = ExtractionStatus.FAILED;
       processingNotes = 'OCR extraction failed: document text unreadable or degraded.';
-    } else if (ocrConfidence < 75 || !hasCriticalRailwayFields || ocrResult.metadata?.ocrOutcome === 'NEEDS_REVIEW') {
+    } else if (
+      ocrConfidence < 75 ||
+      !hasCriticalRailwayFields ||
+      ocrResult.metadata?.ocrOutcome === 'NEEDS_REVIEW'
+    ) {
       extractionStatus = ExtractionStatus.NEEDS_REVIEW;
-      processingNotes = 'Partial OCR extraction: critical travel fields incomplete or borderline confidence.';
+      processingNotes =
+        'Partial OCR extraction: critical travel fields incomplete or borderline confidence.';
     } else {
       extractionStatus = ExtractionStatus.EXTRACTED;
       processingNotes = 'Document successfully processed and structured fields extracted.';

@@ -43,7 +43,12 @@ router.get('/listings', modAccess, validate(paginationQuerySchema), adminControl
 router.get('/listings/:id', modAccess, adminController.getListingDetails);
 
 // 5. Transactions
-router.get('/transactions', modAccess, validate(paginationQuerySchema), adminController.listTransactions);
+router.get(
+  '/transactions',
+  modAccess,
+  validate(paginationQuerySchema),
+  adminController.listTransactions
+);
 router.get('/transactions/:id', modAccess, adminController.getTransactionDetails);
 
 // 6. Reports
@@ -51,15 +56,30 @@ router.get('/reports', modAccess, validate(paginationQuerySchema), adminControll
 router.get('/reports/:id', modAccess, adminController.getReportDetails);
 
 // 7. Fraud Alerts
-router.get('/fraud-alerts', modAccess, validate(paginationQuerySchema), adminController.listFraudAlerts);
+router.get(
+  '/fraud-alerts',
+  modAccess,
+  validate(paginationQuerySchema),
+  adminController.listFraudAlerts
+);
 router.get('/fraud-alerts/:id', modAccess, adminController.getFraudAlertDetails);
 
 // 8. Audit Logs
-router.get('/audit-logs', modAccess, validate(paginationQuerySchema), adminController.listAuditLogs);
+router.get(
+  '/audit-logs',
+  modAccess,
+  validate(paginationQuerySchema),
+  adminController.listAuditLogs
+);
 router.get('/audit-logs/:id', modAccess, adminController.getAuditLogDetails);
 
 // Verifications queue
-router.get('/verification-reviews', modAccess, validate(paginationQuerySchema), adminController.listVerifications);
+router.get(
+  '/verification-reviews',
+  modAccess,
+  validate(paginationQuerySchema),
+  adminController.listVerifications
+);
 
 // =========================================================================
 // MODERATION ACTIONS (ADMIN & MODERATOR)

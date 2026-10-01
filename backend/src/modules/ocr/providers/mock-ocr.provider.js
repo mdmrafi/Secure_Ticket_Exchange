@@ -23,9 +23,19 @@ export class MockOCRProvider extends OCRProvider {
    * Extract text from synthetic ticket document
    */
   async extractText(fileInput, options = {}) {
-    const filename = (options.originalFilename || (typeof fileInput === 'string' ? fileInput : '')).toUpperCase();
-    const isExplicitFail = options.testFailure || filename.includes('FAIL') || filename.includes('CORRUPT') || filename.includes('UNREADABLE');
-    const isExplicitReview = options.testReview || filename.includes('REVIEW') || filename.includes('BORDERLINE') || filename.includes('BLUR');
+    const filename = (
+      options.originalFilename || (typeof fileInput === 'string' ? fileInput : '')
+    ).toUpperCase();
+    const isExplicitFail =
+      options.testFailure ||
+      filename.includes('FAIL') ||
+      filename.includes('CORRUPT') ||
+      filename.includes('UNREADABLE');
+    const isExplicitReview =
+      options.testReview ||
+      filename.includes('REVIEW') ||
+      filename.includes('BORDERLINE') ||
+      filename.includes('BLUR');
 
     logger.info(
       { filename, isExplicitFail, isExplicitReview },

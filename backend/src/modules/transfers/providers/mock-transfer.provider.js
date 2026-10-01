@@ -88,7 +88,10 @@ export class MockTransferProvider extends TransferProvider {
   async transfer(asset, fromUser, toUser, options = {}) {
     // 1. Check simulated failure toggle
     if (this.simulateFailure || options.simulateFailure) {
-      const errorMsg = options.failureReason || this.failureReason || 'Mock external provider error: transfer gateway rejected request';
+      const errorMsg =
+        options.failureReason ||
+        this.failureReason ||
+        'Mock external provider error: transfer gateway rejected request';
       return {
         success: false,
         error: errorMsg,
@@ -107,7 +110,8 @@ export class MockTransferProvider extends TransferProvider {
       if (options.modifyRailwayIdentity && !allowsModification) {
         return {
           success: false,
-          error: 'Forbidden: Railway passenger identity modification is not authorized for this provider',
+          error:
+            'Forbidden: Railway passenger identity modification is not authorized for this provider',
           providerResponse: {
             code: 'RAILWAY_IDENTITY_MODIFICATION_FORBIDDEN',
             timestamp: new Date().toISOString(),

@@ -169,9 +169,6 @@ fraudAssessmentSchema.index(
   { targetType: 1, targetId: 1, timestamp: -1 },
   { name: 'idx_fraud_target_timestamp' }
 );
-fraudAssessmentSchema.index(
-  { riskLevel: 1, status: 1 },
-  { name: 'idx_fraud_risk_status' }
-);
+fraudAssessmentSchema.index({ riskLevel: 1, status: 1 }, { name: 'idx_fraud_risk_status' });
 
 export const FraudAssessment = mongoose.model('FraudAssessment', fraudAssessmentSchema);

@@ -24,7 +24,7 @@ export class ClerkAuthProvider extends AuthProviderInterface {
       // Stub integration: When @clerk/express or @clerk/backend is activated,
       // this calls verifyToken(token, { secretKey })
       logger.debug('Verifying token through Clerk adapter interface');
-      
+
       // Decoded structure placeholder for Clerk session claims:
       return {
         userId: 'clerk_user_placeholder',

@@ -95,5 +95,3 @@ export const RiskLevel = {
   HIGH: 'HIGH',
   CRITICAL: 'CRITICAL',
 };
-
-

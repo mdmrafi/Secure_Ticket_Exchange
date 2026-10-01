@@ -15,11 +15,7 @@ import {
 const router = Router();
 
 // Callback endpoint can be called by payment webhook or client
-router.post(
-  '/:id/callback',
-  validate(paymentCallbackSchema),
-  transactionController.callback
-);
+router.post('/:id/callback', validate(paymentCallbackSchema), transactionController.callback);
 
 // Protected routes (Require authentication)
 router.use(authenticate);
@@ -32,12 +28,12 @@ router.get('/my', validate(queryTransactionsSchema), transactionController.getMy
 router.get('/:id', validate(transactionIdParamSchema), transactionController.getById);
 router.get('/:id/events', validate(transactionIdParamSchema), transactionController.getEvents);
 
-router.post('/:id/pay', validate(transactionIdParamSchema), transactionController.createPaymentSession);
 router.post(
-  '/:id/verify',
-  validate(verifyPaymentSchema),
-  transactionController.verifyPayment
+  '/:id/pay',
+  validate(transactionIdParamSchema),
+  transactionController.createPaymentSession
 );
+router.post('/:id/verify', validate(verifyPaymentSchema), transactionController.verifyPayment);
 router.post(
   '/:id/process-payment',
   validate(processPaymentSchema),

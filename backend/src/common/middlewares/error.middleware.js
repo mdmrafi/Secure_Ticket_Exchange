@@ -31,7 +31,10 @@ export const errorHandler = (err, req, res, next) => {
 
   // Handle Payload Too Large (Express body-parser 413)
   if (err.type === 'entity.too.large' || err.status === 413 || err.statusCode === 413) {
-    error = new AppError('Request payload exceeds maximum allowed size (limit: 200KB)', HttpStatus.PAYLOAD_TOO_LARGE);
+    error = new AppError(
+      'Request payload exceeds maximum allowed size (limit: 200KB)',
+      HttpStatus.PAYLOAD_TOO_LARGE
+    );
   }
 
   // Handle malformed JSON body
@@ -41,10 +44,16 @@ export const errorHandler = (err, req, res, next) => {
 
   // Convert JWT Errors
   if (err.name === 'JsonWebTokenError') {
-    error = new AppError('Invalid authentication token. Please sign in again.', HttpStatus.UNAUTHORIZED);
+    error = new AppError(
+      'Invalid authentication token. Please sign in again.',
+      HttpStatus.UNAUTHORIZED
+    );
   }
   if (err.name === 'TokenExpiredError') {
-    error = new AppError('Authentication token has expired. Please sign in again.', HttpStatus.UNAUTHORIZED);
+    error = new AppError(
+      'Authentication token has expired. Please sign in again.',
+      HttpStatus.UNAUTHORIZED
+    );
   }
 
   const statusCode = error.statusCode || HttpStatus.INTERNAL_SERVER_ERROR;

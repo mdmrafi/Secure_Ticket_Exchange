@@ -4,10 +4,25 @@
   "description": "Production-oriented Secure Digital Asset Exchange Platform",
   "private": true,
   "scripts": {
+    "dev": "npm run dev --prefix backend",
     "backend:dev": "npm run dev --prefix backend",
     "backend:start": "npm start --prefix backend",
-    "backend:test-db": "npm run test:db --prefix backend",
     "frontend:dev": "npm run dev --prefix frontend",
-    "frontend:build": "npm run build --prefix frontend"
+    "frontend:build": "npm run build --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "lint": "npm run lint --prefix backend && npm run lint --prefix frontend",
+    "format": "prettier --write \"**/*.{js,jsx,json,css,html,md}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,json,css,html,md}\"",
+    "audit": "node -e \"const env = { ...process.env }; delete env.npm_config_allow_scripts; const { execSync } = require('child_process'); execSync('npm audit', { cwd: './backend', env, stdio: 'inherit' }); execSync('npm audit', { cwd: './frontend', env, stdio: 'inherit' });\"",
+    "test": "npm run test:all --prefix backend",
+    "test:all": "npm run test:all --prefix backend",
+    "test:payment": "npm run test:payment --prefix backend",
+    "test:security": "npm run test:security --prefix backend",
+    "test:admin": "npm run test:admin --prefix backend",
+    "test:jobs": "npm run test:jobs --prefix backend",
+    "test:transactions": "npm run test:transactions --prefix backend"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.9"
   }
 }

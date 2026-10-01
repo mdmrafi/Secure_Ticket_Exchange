@@ -24,7 +24,10 @@ export const registerOCRProvider = (name, provider) => {
 export const getOCRProvider = (name = 'mock') => {
   const provider = ocrRegistry.get(name.toLowerCase());
   if (!provider) {
-    logger.warn({ requested: name, fallback: 'mock' }, '[OCRProviderFactory] Provider not found, falling back to mock');
+    logger.warn(
+      { requested: name, fallback: 'mock' },
+      '[OCRProviderFactory] Provider not found, falling back to mock'
+    );
     return mockOCR;
   }
   return provider;

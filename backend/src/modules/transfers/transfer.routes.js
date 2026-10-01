@@ -24,48 +24,20 @@ router.get(
 );
 
 // Create transfer request
-router.post(
-  '/',
-  validate(requestTransferSchema),
-  transferController.requestTransfer
-);
+router.post('/', validate(requestTransferSchema), transferController.requestTransfer);
 
 // Get single transfer details and audit events
-router.get(
-  '/:id',
-  validate(transferIdParamSchema),
-  transferController.getTransferById
-);
+router.get('/:id', validate(transferIdParamSchema), transferController.getTransferById);
 
-router.get(
-  '/:id/events',
-  validate(transferIdParamSchema),
-  transferController.getTransferEvents
-);
+router.get('/:id/events', validate(transferIdParamSchema), transferController.getTransferEvents);
 
 // Lifecycle actions
-router.post(
-  '/:id/approve',
-  validate(transferIdParamSchema),
-  transferController.approveTransfer
-);
+router.post('/:id/approve', validate(transferIdParamSchema), transferController.approveTransfer);
 
-router.post(
-  '/:id/execute',
-  validate(executeTransferSchema),
-  transferController.executeTransfer
-);
+router.post('/:id/execute', validate(executeTransferSchema), transferController.executeTransfer);
 
-router.post(
-  '/:id/reject',
-  validate(rejectTransferSchema),
-  transferController.rejectTransfer
-);
+router.post('/:id/reject', validate(rejectTransferSchema), transferController.rejectTransfer);
 
-router.post(
-  '/:id/cancel',
-  validate(cancelTransferSchema),
-  transferController.cancelTransfer
-);
+router.post('/:id/cancel', validate(cancelTransferSchema), transferController.cancelTransfer);
 
 export const transferRoutes = router;

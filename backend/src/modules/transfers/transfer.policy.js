@@ -1,4 +1,8 @@
-import { AssetTypes, VerificationStatus, AssetStatus } from '../../common/constants/asset-types.constant.js';
+import {
+  AssetTypes,
+  VerificationStatus,
+  AssetStatus,
+} from '../../common/constants/asset-types.constant.js';
 
 /**
  * TransferPolicy
@@ -23,25 +27,29 @@ export class TransferPolicy {
       legallyTransferable: false,
       requiresAuthorizedProvider: true,
       allowsDirectIdentityModification: false,
-      description: 'Railway tickets are non-transferable passenger records by transport regulations. Transfer requires an authorized official railway provider.',
+      description:
+        'Railway tickets are non-transferable passenger records by transport regulations. Transfer requires an authorized official railway provider.',
     },
     [AssetTypes.BUS_TICKET]: {
       legallyTransferable: true,
       requiresAuthorizedProvider: false,
       allowsDirectIdentityModification: true,
-      description: 'Bus tickets are generally transferable subject to operator cancellation policies.',
+      description:
+        'Bus tickets are generally transferable subject to operator cancellation policies.',
     },
     [AssetTypes.EVENT_TICKET]: {
       legallyTransferable: true,
       requiresAuthorizedProvider: false,
       allowsDirectIdentityModification: true,
-      description: 'Event tickets and concert passes are legally transferable unless restricted by organizer.',
+      description:
+        'Event tickets and concert passes are legally transferable unless restricted by organizer.',
     },
     [AssetTypes.DOCUMENT]: {
       legallyTransferable: false,
       requiresAuthorizedProvider: true,
       allowsDirectIdentityModification: false,
-      description: 'Legal identity documents and government records cannot be transferred between individuals.',
+      description:
+        'Legal identity documents and government records cannot be transferred between individuals.',
     },
     [AssetTypes.OTHER]: {
       legallyTransferable: true,
@@ -193,15 +201,17 @@ export class TransferPolicy {
     if (!policy.legallyTransferable) {
       // If asset is not legally transferable by default (e.g. RAILWAY_TICKET or DOCUMENT),
       // it can ONLY be transferred if an authorized provider explicitly enables it
-      const providerSupports = provider && (
-        (this.isRailwayTicket(asset) && provider.isAuthorizedRailwayProvider) ||
-        (provider.supports && provider.supports(asset))
-      );
+      const providerSupports =
+        provider &&
+        ((this.isRailwayTicket(asset) && provider.isAuthorizedRailwayProvider) ||
+          (provider.supports && provider.supports(asset)));
 
       if (!providerSupports) {
         return {
           eligible: false,
-          reason: policy.description || `${asset.assetType} is not legally transferable under standard policy`,
+          reason:
+            policy.description ||
+            `${asset.assetType} is not legally transferable under standard policy`,
           policyCode: 'LEGALLY_NON_TRANSFERABLE',
           requiresAuthorizedProvider: policy.requiresAuthorizedProvider,
           supportsIdentityModification: false,

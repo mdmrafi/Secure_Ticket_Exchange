@@ -76,7 +76,9 @@ function assert(condition, testName, details = '') {
 }
 
 async function runTests() {
-  console.log(`\n${colors.bold}${colors.cyan}======================================================`);
+  console.log(
+    `\n${colors.bold}${colors.cyan}======================================================`
+  );
   console.log(`     MARKETPLACE LISTING SYSTEM TEST SUITE`);
   console.log(`======================================================${colors.reset}\n`);
   console.log(`Target API URL: ${BASE_URL}\n`);
@@ -242,7 +244,9 @@ async function runTests() {
     // =================================================================
     // Scenario 1: Authorization & User Status Listing Rules
     // =================================================================
-    console.log(`${colors.bold}Scenario 1: Authorization & User Status Listing Rules${colors.reset}`);
+    console.log(
+      `${colors.bold}Scenario 1: Authorization & User Status Listing Rules${colors.reset}`
+    );
 
     // Rule: Suspended users cannot create listings
     const suspendedRes = await apiCall(
@@ -270,7 +274,10 @@ async function runTests() {
       },
       tokenOwnerB
     );
-    assert(nonOwnerRes.status === 403, 'Non-owner blocked from listing another user asset (403 Forbidden)');
+    assert(
+      nonOwnerRes.status === 403,
+      'Non-owner blocked from listing another user asset (403 Forbidden)'
+    );
     assert(
       nonOwnerRes.body?.message?.includes('You can only list assets that you own'),
       'Clear ownership error message returned'
@@ -286,7 +293,9 @@ async function runTests() {
     // =================================================================
     // Scenario 2: Verification Requirements & Suspicious Asset Guards
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 2: Verification Requirements & Suspicious Asset Guards${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 2: Verification Requirements & Suspicious Asset Guards${colors.reset}`
+    );
 
     // Rule: Asset must meet verification requirements
     const unverifiedRes = await apiCall(
@@ -298,10 +307,7 @@ async function runTests() {
       },
       tokenOwnerA
     );
-    assert(
-      unverifiedRes.status === 400,
-      'Unverified asset listing rejected with 400 Bad Request'
-    );
+    assert(unverifiedRes.status === 400, 'Unverified asset listing rejected with 400 Bad Request');
     assert(
       unverifiedRes.body?.message?.includes('verification requirements'),
       'Explanation of verification requirement returned'
@@ -329,7 +335,9 @@ async function runTests() {
     // =================================================================
     // Scenario 3: Successful Listing Creation & State Transitions
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 3: Successful Listing Creation & State Transitions${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 3: Successful Listing Creation & State Transitions${colors.reset}`
+    );
 
     const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -380,10 +388,7 @@ async function runTests() {
       },
       tokenOwnerA
     );
-    assert(
-      duplicateRes.status === 409,
-      'Duplicate active listing blocked with 409 Conflict'
-    );
+    assert(duplicateRes.status === 409, 'Duplicate active listing blocked with 409 Conflict');
     assert(
       duplicateRes.body?.message?.includes('already has an active or reserved listing'),
       'Conflict error specifies active listing already exists'
@@ -421,18 +426,25 @@ async function runTests() {
     // =================================================================
     // Scenario 5: Single Listing Retrieval (GET /listings/:id)
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 5: Single Listing Retrieval (GET /listings/:id)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 5: Single Listing Retrieval (GET /listings/:id)${colors.reset}`
+    );
 
     const getRes = await apiCall(`/listings/${createdListing._id}`);
     assert(getRes.status === 200, 'GET /listings/:id returns 200 OK');
     assert(getRes.body?.data?._id === createdListing._id, 'Returns matching listing ID');
-    assert(getRes.body?.data?.assetId?.title === 'Train 701: Dhaka -> Chittagong', 'Populates asset details');
+    assert(
+      getRes.body?.data?.assetId?.title === 'Train 701: Dhaka -> Chittagong',
+      'Populates asset details'
+    );
     assert(getRes.body?.data?.sellerId?.name === 'Ticket Seller Alice', 'Populates seller details');
 
     // =================================================================
     // Scenario 6: Protected Ticket Identity Fields Immutability
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 6: Protected Ticket Identity Fields Immutability${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 6: Protected Ticket Identity Fields Immutability${colors.reset}`
+    );
 
     // Attempting to modify PNR
     const modifyPnrRes = await apiCall(
@@ -441,10 +453,7 @@ async function runTests() {
       { pnr: 'HACKED-PNR-999' },
       tokenOwnerA
     );
-    assert(
-      modifyPnrRes.status === 400,
-      'Modifying protected PNR rejected with 400 Bad Request'
-    );
+    assert(modifyPnrRes.status === 400, 'Modifying protected PNR rejected with 400 Bad Request');
     assert(
       modifyPnrRes.body?.message?.includes('protected ticket identity or asset fields'),
       'Protected field error explains immutability'
@@ -506,7 +515,9 @@ async function runTests() {
     // =================================================================
     // Scenario 7: Multi-Field Search & Filtering (GET /listings)
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 7: Multi-Field Search & Filtering (GET /listings)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 7: Multi-Field Search & Filtering (GET /listings)${colors.reset}`
+    );
 
     // Filter by assetType = RAILWAY_TICKET
     const filterRailway = await apiCall('/listings?assetType=RAILWAY_TICKET');
@@ -520,16 +531,16 @@ async function runTests() {
     // Filter by source = Dhaka
     const filterSource = await apiCall('/listings?source=Dhaka');
     assert(filterSource.status === 200, 'Filter by source=Dhaka returns 200 OK');
-    assert(filterSource.body?.data?.length >= 2, 'Returns both railway and bus tickets originating from Dhaka');
+    assert(
+      filterSource.body?.data?.length >= 2,
+      'Returns both railway and bus tickets originating from Dhaka'
+    );
 
     // Filter by destination = Chittagong
     const filterDest = await apiCall('/listings?destination=Chittagong');
     assert(filterDest.status === 200, 'Filter by destination=Chittagong returns 200 OK');
     assert(filterDest.body?.data?.length === 1, 'Only Alice Chittagong ticket returned');
-    assert(
-      filterDest.body?.data?.[0]?._id === createdListing._id,
-      'Matches Alice listing ID'
-    );
+    assert(filterDest.body?.data?.[0]?._id === createdListing._id, 'Matches Alice listing ID');
 
     // Filter by date = 2026-10-15
     const filterDate = await apiCall('/listings?date=2026-10-15');
@@ -540,14 +551,14 @@ async function runTests() {
     const filterPrice = await apiCall('/listings?minPrice=2000&maxPrice=3000');
     assert(filterPrice.status === 200, 'Filter by price range [2000-3000] returns 200 OK');
     assert(filterPrice.body?.data?.length === 1, 'Only bus ticket (price 2200) returned');
-    assert(
-      filterPrice.body?.data?.[0]?.askingPrice === 2200,
-      'Returned listing price is 2200'
-    );
+    assert(filterPrice.body?.data?.[0]?.askingPrice === 2200, 'Returned listing price is 2200');
 
     // Filter by verificationStatus = VERIFIED
     const filterVerification = await apiCall('/listings?verificationStatus=VERIFIED');
-    assert(filterVerification.status === 200, 'Filter by verificationStatus=VERIFIED returns 200 OK');
+    assert(
+      filterVerification.status === 200,
+      'Filter by verificationStatus=VERIFIED returns 200 OK'
+    );
     assert(filterVerification.body?.data?.length >= 3, 'Returns all verified asset listings');
 
     // =================================================================
@@ -587,7 +598,9 @@ async function runTests() {
     // =================================================================
     // Scenario 9: Deletion & Cancellation (DELETE /listings/:id)
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 9: Deletion & Cancellation (DELETE /listings/:id)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 9: Deletion & Cancellation (DELETE /listings/:id)${colors.reset}`
+    );
 
     // Non-owner unauthorized deletion attempt
     const nonOwnerDeleteRes = await apiCall(
@@ -596,18 +609,10 @@ async function runTests() {
       null,
       tokenOwnerB
     );
-    assert(
-      nonOwnerDeleteRes.status === 403,
-      'Non-owner delete rejected with 403 Forbidden'
-    );
+    assert(nonOwnerDeleteRes.status === 403, 'Non-owner delete rejected with 403 Forbidden');
 
     // Owner deletes / cancels listing
-    const deleteRes = await apiCall(
-      `/listings/${createdListing._id}`,
-      'DELETE',
-      null,
-      tokenOwnerA
-    );
+    const deleteRes = await apiCall(`/listings/${createdListing._id}`, 'DELETE', null, tokenOwnerA);
     assert(deleteRes.status === 200, 'Owner cancels listing (200 OK)');
     assert(
       deleteRes.body?.data?.status === ListingStatus.CANCELLED,
@@ -666,7 +671,6 @@ async function runTests() {
       indexNames.some((name) => name.includes('assetId')),
       'Database index verified: assetId uniqueness guard'
     );
-
   } catch (err) {
     console.error(`${colors.red}Unhandled test suite exception:${colors.reset}`, err);
     failedCount++;
@@ -675,8 +679,16 @@ async function runTests() {
     // CLEANUP
     // -----------------------------------------------------------------
     console.log(`\n${colors.yellow}[CLEANUP] Cleaning up test fixtures...${colors.reset}`);
-    const userIds = [userOwnerA?._id, userOwnerB?._id, userSuspended?._id, userAdmin?._id].filter(Boolean);
-    const assetIds = [verifiedAssetA?._id, unverifiedAsset?._id, suspiciousAsset?._id, busAsset?._id, eventAsset?._id].filter(Boolean);
+    const userIds = [userOwnerA?._id, userOwnerB?._id, userSuspended?._id, userAdmin?._id].filter(
+      Boolean
+    );
+    const assetIds = [
+      verifiedAssetA?._id,
+      unverifiedAsset?._id,
+      suspiciousAsset?._id,
+      busAsset?._id,
+      eventAsset?._id,
+    ].filter(Boolean);
 
     if (assetIds.length > 0) {
       await Listing.deleteMany({ assetId: { $in: assetIds } });
@@ -689,9 +701,15 @@ async function runTests() {
     await mongoose.disconnect();
     console.log(`${colors.blue}Database disconnected cleanly.${colors.reset}\n`);
 
-    console.log(`${colors.bold}${colors.cyan}======================================================`);
-    console.log(`TEST SUMMARY: ${colors.green}${passedCount} passed${colors.cyan}, ${failedCount > 0 ? colors.red : colors.green}${failedCount} failed${colors.reset}`);
-    console.log(`${colors.bold}${colors.cyan}======================================================${colors.reset}\n`);
+    console.log(
+      `${colors.bold}${colors.cyan}======================================================`
+    );
+    console.log(
+      `TEST SUMMARY: ${colors.green}${passedCount} passed${colors.cyan}, ${failedCount > 0 ? colors.red : colors.green}${failedCount} failed${colors.reset}`
+    );
+    console.log(
+      `${colors.bold}${colors.cyan}======================================================${colors.reset}\n`
+    );
 
     if (failedCount > 0) {
       process.exit(1);

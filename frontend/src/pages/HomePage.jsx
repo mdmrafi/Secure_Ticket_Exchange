@@ -89,8 +89,9 @@ export const HomePage = () => {
         </h1>
 
         <p className="text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
-          Initial use-case stops fraud, forged PDFs, and black-market scalping in railway ticket transfers.
-          Architected from day one to scale into bus passes, live events, and transferable documents.
+          Initial use-case stops fraud, forged PDFs, and black-market scalping in railway ticket
+          transfers. Architected from day one to scale into bus passes, live events, and
+          transferable documents.
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
@@ -140,8 +141,8 @@ export const HomePage = () => {
                 healthData?.status === 'healthy'
                   ? 'text-emerald-400'
                   : healthData?.status === 'degraded'
-                  ? 'text-amber-400'
-                  : 'text-rose-400'
+                    ? 'text-amber-400'
+                    : 'text-rose-400'
               }`}
             >
               {healthData?.status ? healthData.status.toUpperCase() : 'UNKNOWN'}
@@ -155,7 +156,9 @@ export const HomePage = () => {
                 healthData?.database?.connected ? 'text-emerald-400' : 'text-amber-400'
               }`}
             >
-              {healthData?.database?.status ? healthData.database.status.toUpperCase() : 'DISCONNECTED'}
+              {healthData?.database?.status
+                ? healthData.database.status.toUpperCase()
+                : 'DISCONNECTED'}
             </span>
           </div>
 
@@ -228,7 +231,9 @@ export const HomePage = () => {
 
       {/* Core Architectural Guarantees */}
       <section className="p-8 rounded-2xl glass-card border border-slate-800 space-y-6">
-        <h2 className="text-xl font-bold text-white">Production Architecture Principles Implemented</h2>
+        <h2 className="text-xl font-bold text-white">
+          Production Architecture Principles Implemented
+        </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
           <div className="space-y-2">
@@ -236,8 +241,9 @@ export const HomePage = () => {
               <Lock className="w-4 h-4 text-blue-400" /> Pluggable Auth (JWT & Clerk)
             </div>
             <p className="text-slate-400 leading-relaxed">
-              Standardized <code className="text-blue-300">AuthProviderInterface</code> allows instantaneous switch
-              between native JWT and managed identity (Clerk) without touching route controllers.
+              Standardized <code className="text-blue-300">AuthProviderInterface</code> allows
+              instantaneous switch between native JWT and managed identity (Clerk) without touching
+              route controllers.
             </p>
           </div>
 
@@ -246,8 +252,8 @@ export const HomePage = () => {
               <Layers className="w-4 h-4 text-purple-400" /> Controller-Service-Repository
             </div>
             <p className="text-slate-400 leading-relaxed">
-              Clean separation of concerns with HTTP transport, business orchestration, and Mongoose persistence
-              isolated across 9 dedicated backend modules.
+              Clean separation of concerns with HTTP transport, business orchestration, and Mongoose
+              persistence isolated across 9 dedicated backend modules.
             </p>
           </div>
 
@@ -256,8 +262,8 @@ export const HomePage = () => {
               <Zap className="w-4 h-4 text-emerald-400" /> Inngest & Socket.IO
             </div>
             <p className="text-slate-400 leading-relaxed">
-              Event-driven background pipeline for fraud detection and OCR parsing combined with Socket.IO for
-              real-time escrow alerts and order state changes.
+              Event-driven background pipeline for fraud detection and OCR parsing combined with
+              Socket.IO for real-time escrow alerts and order state changes.
             </p>
           </div>
         </div>

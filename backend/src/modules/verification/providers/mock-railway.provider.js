@@ -48,7 +48,10 @@ export class MockRailwayVerificationProvider extends RailwayVerificationProvider
       rawPnr.includes('PROV_FAIL') ||
       rawPnr.includes('TIMEOUT')
     ) {
-      logger.warn({ pnr: rawPnr }, '[MockRailwayVerificationProvider] Simulated provider timeout/failure triggered');
+      logger.warn(
+        { pnr: rawPnr },
+        '[MockRailwayVerificationProvider] Simulated provider timeout/failure triggered'
+      );
       return {
         status: VerificationStatus.MANUAL_REVIEW,
         ticketExists: null,
@@ -110,10 +113,7 @@ export class MockRailwayVerificationProvider extends RailwayVerificationProvider
     }
 
     // 4. Simulating Journey / Route Mismatch
-    if (
-      options.journeyMatch === false ||
-      rawPnr.includes('JOURNEY_MISMATCH')
-    ) {
+    if (options.journeyMatch === false || rawPnr.includes('JOURNEY_MISMATCH')) {
       return {
         status: VerificationStatus.SUSPICIOUS,
         ticketExists: true,
@@ -129,11 +129,7 @@ export class MockRailwayVerificationProvider extends RailwayVerificationProvider
     }
 
     // 5. Simulating Manual Review Flag
-    if (
-      options.manualReview === true ||
-      rawPnr.includes('REVIEW') ||
-      rawPnr.endsWith('9999')
-    ) {
+    if (options.manualReview === true || rawPnr.includes('REVIEW') || rawPnr.endsWith('9999')) {
       return {
         status: VerificationStatus.MANUAL_REVIEW,
         ticketExists: true,

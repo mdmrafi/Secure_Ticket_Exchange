@@ -44,7 +44,10 @@ export const reservationExpirationEventJob = inngest.createFunction(
     retries: 3,
     idempotency: 'event.id',
     onFailure: async ({ error, event }) => {
-      logger.error({ error: error.message, eventId: event.id }, 'Reservation expiration watcher failed');
+      logger.error(
+        { error: error.message, eventId: event.id },
+        'Reservation expiration watcher failed'
+      );
     },
   },
   { event: EventNames.LISTING_RESERVED },

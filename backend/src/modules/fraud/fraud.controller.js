@@ -40,11 +40,7 @@ export class FraudController {
    * POST /api/v1/admin/fraud/assessments/:id/review
    */
   reviewAssessment = asyncHandler(async (req, res) => {
-    const updated = await this.service.reviewAssessment(
-      req.params.id,
-      req.user.userId,
-      req.body
-    );
+    const updated = await this.service.reviewAssessment(req.params.id, req.user.userId, req.body);
     return ApiResponse.success(res, updated, 'Fraud assessment reviewed and resolved');
   });
 
@@ -53,10 +49,7 @@ export class FraudController {
    * POST /api/v1/admin/fraud/assess
    */
   triggerAssessment = asyncHandler(async (req, res) => {
-    const assessment = await this.service.assessAsset(
-      req.body.assetId,
-      req.body.context || {}
-    );
+    const assessment = await this.service.assessAsset(req.body.assetId, req.body.context || {});
     return ApiResponse.created(res, assessment, 'Asset fraud evaluation completed');
   });
 }

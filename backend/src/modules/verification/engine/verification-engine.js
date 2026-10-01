@@ -49,7 +49,8 @@ export class VerificationEngine {
         status: 'FAILED',
         score: 0,
         details: { hasDocument: true, fileExists: false, docPath },
-        reason: 'Document validation failed: Stored ticket file could not be found on storage disk.',
+        reason:
+          'Document validation failed: Stored ticket file could not be found on storage disk.',
       };
     }
 
@@ -71,7 +72,8 @@ export class VerificationEngine {
         status: 'FAILED',
         score: 20,
         details: { hasDocument: true, fileExists: true, validSignature: false },
-        reason: 'Document validation failed: File header magic bytes do not match declared image or PDF type.',
+        reason:
+          'Document validation failed: File header magic bytes do not match declared image or PDF type.',
       };
     }
 
@@ -155,7 +157,10 @@ export class VerificationEngine {
     // 3. Journey date validity
     if (journeyDate) {
       const parsedDate = new Date(journeyDate);
-      if (isNaN(parsedDate.getTime()) && !/^\d{1,4}[-\/][0-9A-Za-z]{2,3}[-\/]\d{2,4}$/.test(journeyDate)) {
+      if (
+        isNaN(parsedDate.getTime()) &&
+        !/^\d{1,4}[-\/][0-9A-Za-z]{2,3}[-\/]\d{2,4}$/.test(journeyDate)
+      ) {
         errors.push('Malformed journey date format');
       }
     }
@@ -196,7 +201,8 @@ export class VerificationEngine {
         score: 0,
         duplicateFound: true,
         details: { conflictingAssetId: 'asset_duplicate_test_simulated' },
-        reason: 'Duplicate ticket detected: This PNR has already been registered or listed by another user.',
+        reason:
+          'Duplicate ticket detected: This PNR has already been registered or listed by another user.',
       };
     }
 
@@ -220,7 +226,8 @@ export class VerificationEngine {
         score: 0,
         duplicateFound: true,
         details: { conflictingAssetId: duplicate._id.toString(), status: duplicate.status },
-        reason: 'Duplicate ticket detected: This PNR is already registered to another active asset on the platform.',
+        reason:
+          'Duplicate ticket detected: This PNR is already registered to another active asset on the platform.',
       };
     }
 
@@ -260,7 +267,8 @@ export class VerificationEngine {
     if (providerResult.isProviderFailure) {
       layerStatus = 'MANUAL_REVIEW';
       score = 40;
-      reason = providerResult.errorMessage || 'Railway authority gateway temporary failure / timeout.';
+      reason =
+        providerResult.errorMessage || 'Railway authority gateway temporary failure / timeout.';
     } else if (providerResult.ticketExists === false) {
       layerStatus = 'FAILED';
       score = 0;
@@ -276,7 +284,8 @@ export class VerificationEngine {
     } else if (providerResult.status === VerificationStatus.MANUAL_REVIEW) {
       layerStatus = 'MANUAL_REVIEW';
       score = 50;
-      reason = providerResult.details?.reason || 'Railway provider flagged ticket for manual inspection.';
+      reason =
+        providerResult.details?.reason || 'Railway provider flagged ticket for manual inspection.';
     }
 
     return {
@@ -387,8 +396,12 @@ export class VerificationEngine {
 
     // Summary counters
     const passedCount = checks.filter((c) => c.status === 'PASSED').length;
-    const failedCount = checks.filter((c) => c.status === 'FAILED' || c.status === 'SUSPICIOUS').length;
-    const reviewCount = checks.filter((c) => c.status === 'MANUAL_REVIEW' || c.status === 'FLAGGED').length;
+    const failedCount = checks.filter(
+      (c) => c.status === 'FAILED' || c.status === 'SUSPICIOUS'
+    ).length;
+    const reviewCount = checks.filter(
+      (c) => c.status === 'MANUAL_REVIEW' || c.status === 'FLAGGED'
+    ).length;
 
     return {
       status: finalStatus,

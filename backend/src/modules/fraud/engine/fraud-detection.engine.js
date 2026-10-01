@@ -3,11 +3,7 @@ import { User } from '../../users/user.model.js';
 import { Listing } from '../../listings/listing.model.js';
 import { Transaction } from '../../transactions/transaction.model.js';
 import { Report } from '../../reports/report.model.js';
-import {
-  RiskLevel,
-  FraudSignalCode,
-  FraudSignalMetadata,
-} from '../constants/fraud.constant.js';
+import { RiskLevel, FraudSignalCode, FraudSignalMetadata } from '../constants/fraud.constant.js';
 import { VerificationStatus } from '../../../common/constants/asset-types.constant.js';
 
 /**
@@ -33,7 +29,10 @@ export class FraudDetectionEngine {
   async checkRepeatedListing(asset, context = {}) {
     const meta = FraudSignalMetadata[FraudSignalCode.REPEATED_LISTING_SAME_ASSET];
 
-    if (context.forceSignal === FraudSignalCode.REPEATED_LISTING_SAME_ASSET || context.testRepeatedListing) {
+    if (
+      context.forceSignal === FraudSignalCode.REPEATED_LISTING_SAME_ASSET ||
+      context.testRepeatedListing
+    ) {
       const count = context.repeatedListingCount || 3;
       return {
         code: FraudSignalCode.REPEATED_LISTING_SAME_ASSET,
@@ -53,19 +52,26 @@ export class FraudDetectionEngine {
     }
 
     if (!asset) {
-      return this._untriggeredSignal(FraudSignalCode.REPEATED_LISTING_SAME_ASSET, 'No asset provided for duplicate listing check.');
+      return this._untriggeredSignal(
+        FraudSignalCode.REPEATED_LISTING_SAME_ASSET,
+        'No asset provided for duplicate listing check.'
+      );
     }
 
     const duplicateListings = await Listing.find({
       assetId: asset._id,
       _id: { $ne: context.listingId || null },
-    }).limit(10).lean();
+    })
+      .limit(10)
+      .lean();
 
     // Check if other assets share the same uniqueAssetIdentifier
     const sameIdentifierAssets = await Asset.find({
       uniqueAssetIdentifier: asset.uniqueAssetIdentifier,
       _id: { $ne: asset._id },
-    }).limit(10).lean();
+    })
+      .limit(10)
+      .lean();
 
     const totalDuplicates = duplicateListings.length + sameIdentifierAssets.length;
 
@@ -100,7 +106,10 @@ export class FraudDetectionEngine {
   async checkSuspiciousAccountActivity(user, context = {}) {
     const meta = FraudSignalMetadata[FraudSignalCode.SUSPICIOUS_ACCOUNT_ACTIVITY];
 
-    if (context.forceSignal === FraudSignalCode.SUSPICIOUS_ACCOUNT_ACTIVITY || context.testSuspiciousAccount) {
+    if (
+      context.forceSignal === FraudSignalCode.SUSPICIOUS_ACCOUNT_ACTIVITY ||
+      context.testSuspiciousAccount
+    ) {
       return {
         code: FraudSignalCode.SUSPICIOUS_ACCOUNT_ACTIVITY,
         name: meta.name,
@@ -109,7 +118,8 @@ export class FraudDetectionEngine {
         score: 65,
         weight: meta.weight,
         description: meta.description,
-        explanation: 'User account was created less than 24 hours ago with unverified KYC and is attempting high-value marketplace operations.',
+        explanation:
+          'User account was created less than 24 hours ago with unverified KYC and is attempting high-value marketplace operations.',
         evidence: {
           accountAgeHours: 6,
           kycStatus: 'UNVERIFIED',
@@ -119,15 +129,23 @@ export class FraudDetectionEngine {
     }
 
     if (!user) {
-      return this._untriggeredSignal(FraudSignalCode.SUSPICIOUS_ACCOUNT_ACTIVITY, 'No user profile provided.');
+      return this._untriggeredSignal(
+        FraudSignalCode.SUSPICIOUS_ACCOUNT_ACTIVITY,
+        'No user profile provided.'
+      );
     }
 
     const accountAgeMs = Date.now() - new Date(user.createdAt || Date.now()).getTime();
     const accountAgeHours = accountAgeMs / (1000 * 60 * 60);
 
     const isVeryNew = accountAgeHours < 48;
-    const isUnverified = user.kycStatus === 'NOT_STARTED' || user.kycStatus === 'PENDING' || user.kycStatus === 'REJECTED' || !user.isVerified;
-    const isFlagged = user.accountStatus === 'SUSPENDED' || (user.trustScore && user.trustScore < 50);
+    const isUnverified =
+      user.kycStatus === 'NOT_STARTED' ||
+      user.kycStatus === 'PENDING' ||
+      user.kycStatus === 'REJECTED' ||
+      !user.isVerified;
+    const isFlagged =
+      user.accountStatus === 'SUSPENDED' || (user.trustScore && user.trustScore < 50);
 
     if (isFlagged || (isVeryNew && isUnverified && (context.askingPrice || 0) > 3000)) {
       return {
@@ -160,7 +178,10 @@ export class FraudDetectionEngine {
   async checkExcessiveCancellations(user, context = {}) {
     const meta = FraudSignalMetadata[FraudSignalCode.EXCESSIVE_CANCELLATIONS];
 
-    if (context.forceSignal === FraudSignalCode.EXCESSIVE_CANCELLATIONS || context.testExcessiveCancellations) {
+    if (
+      context.forceSignal === FraudSignalCode.EXCESSIVE_CANCELLATIONS ||
+      context.testExcessiveCancellations
+    ) {
       const cancellations = context.cancellationCount || 6;
       const total = context.totalTransactions || 8;
       const rate = Math.round((cancellations / total) * 100);
@@ -223,7 +244,10 @@ export class FraudDetectionEngine {
   async checkMultipleFailedTransactions(user, asset, context = {}) {
     const meta = FraudSignalMetadata[FraudSignalCode.MULTIPLE_FAILED_TRANSACTIONS];
 
-    if (context.forceSignal === FraudSignalCode.MULTIPLE_FAILED_TRANSACTIONS || context.testMultipleFailedTransactions) {
+    if (
+      context.forceSignal === FraudSignalCode.MULTIPLE_FAILED_TRANSACTIONS ||
+      context.testMultipleFailedTransactions
+    ) {
       const failedCount = context.failedCount || 4;
       return {
         code: FraudSignalCode.MULTIPLE_FAILED_TRANSACTIONS,
@@ -243,7 +267,10 @@ export class FraudDetectionEngine {
     if (asset) orConditions.push({ assetId: asset._id });
 
     if (orConditions.length === 0) {
-      return this._untriggeredSignal(FraudSignalCode.MULTIPLE_FAILED_TRANSACTIONS, 'No target entity.');
+      return this._untriggeredSignal(
+        FraudSignalCode.MULTIPLE_FAILED_TRANSACTIONS,
+        'No target entity.'
+      );
     }
 
     const failedCount = await Transaction.countDocuments({
@@ -278,8 +305,12 @@ export class FraudDetectionEngine {
   async checkDuplicateDocumentFingerprints(asset, context = {}) {
     const meta = FraudSignalMetadata[FraudSignalCode.DUPLICATE_DOCUMENT_FINGERPRINTS];
 
-    if (context.forceSignal === FraudSignalCode.DUPLICATE_DOCUMENT_FINGERPRINTS || context.testDuplicateFingerprint) {
-      const hash = context.testHash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+    if (
+      context.forceSignal === FraudSignalCode.DUPLICATE_DOCUMENT_FINGERPRINTS ||
+      context.testDuplicateFingerprint
+    ) {
+      const hash =
+        context.testHash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
       return {
         code: FraudSignalCode.DUPLICATE_DOCUMENT_FINGERPRINTS,
         name: meta.name,
@@ -349,7 +380,10 @@ export class FraudDetectionEngine {
   async checkOcrInconsistencies(asset, context = {}) {
     const meta = FraudSignalMetadata[FraudSignalCode.OCR_INCONSISTENCIES];
 
-    if (context.forceSignal === FraudSignalCode.OCR_INCONSISTENCIES || context.testOcrInconsistency) {
+    if (
+      context.forceSignal === FraudSignalCode.OCR_INCONSISTENCIES ||
+      context.testOcrInconsistency
+    ) {
       return {
         code: FraudSignalCode.OCR_INCONSISTENCIES,
         name: meta.name,
@@ -358,7 +392,8 @@ export class FraudDetectionEngine {
         score: 70,
         weight: meta.weight,
         description: meta.description,
-        explanation: "OCR text extraction conflicts with ticket metadata: extracted passenger name 'RAHIM UDDIN' does not match declared name 'KARIM MIAH'.",
+        explanation:
+          "OCR text extraction conflicts with ticket metadata: extracted passenger name 'RAHIM UDDIN' does not match declared name 'KARIM MIAH'.",
         evidence: {
           ocrPassengerName: 'RAHIM UDDIN',
           declaredPassengerName: 'KARIM MIAH',
@@ -394,11 +429,17 @@ export class FraudDetectionEngine {
 
     // Check train / journey date
     if (ocr.journeyDate && userMeta.journeyDate && ocr.journeyDate !== userMeta.journeyDate) {
-      conflicts.push({ field: 'journeyDate', ocr: ocr.journeyDate, declared: userMeta.journeyDate });
+      conflicts.push({
+        field: 'journeyDate',
+        ocr: ocr.journeyDate,
+        declared: userMeta.journeyDate,
+      });
     }
 
     if (conflicts.length > 0) {
-      const conflictSummary = conflicts.map((c) => `${c.field} (OCR: '${c.ocr}' vs Declared: '${c.declared}')`).join(', ');
+      const conflictSummary = conflicts
+        .map((c) => `${c.field} (OCR: '${c.ocr}' vs Declared: '${c.declared}')`)
+        .join(', ');
       return {
         code: FraudSignalCode.OCR_INCONSISTENCIES,
         name: meta.name,
@@ -424,7 +465,10 @@ export class FraudDetectionEngine {
   async checkTicketVerificationMismatch(asset, context = {}) {
     const meta = FraudSignalMetadata[FraudSignalCode.TICKET_VERIFICATION_MISMATCH];
 
-    if (context.forceSignal === FraudSignalCode.TICKET_VERIFICATION_MISMATCH || context.testVerificationMismatch) {
+    if (
+      context.forceSignal === FraudSignalCode.TICKET_VERIFICATION_MISMATCH ||
+      context.testVerificationMismatch
+    ) {
       return {
         code: FraudSignalCode.TICKET_VERIFICATION_MISMATCH,
         name: meta.name,
@@ -433,7 +477,8 @@ export class FraudDetectionEngine {
         score: 95,
         weight: meta.weight,
         description: meta.description,
-        explanation: 'Official transport authority provider returned a direct verification mismatch: ticket PNR was not found in official reservation database.',
+        explanation:
+          'Official transport authority provider returned a direct verification mismatch: ticket PNR was not found in official reservation database.',
         evidence: {
           verificationStatus: VerificationStatus.FAILED,
           providerResponseCode: 'INVALID_PNR',
@@ -442,7 +487,10 @@ export class FraudDetectionEngine {
     }
 
     if (!asset) {
-      return this._untriggeredSignal(FraudSignalCode.TICKET_VERIFICATION_MISMATCH, 'No asset provided.');
+      return this._untriggeredSignal(
+        FraudSignalCode.TICKET_VERIFICATION_MISMATCH,
+        'No asset provided.'
+      );
     }
 
     const isFailed =
@@ -478,7 +526,10 @@ export class FraudDetectionEngine {
   async checkAbnormalListingFrequency(user, context = {}) {
     const meta = FraudSignalMetadata[FraudSignalCode.ABNORMAL_LISTING_FREQUENCY];
 
-    if (context.forceSignal === FraudSignalCode.ABNORMAL_LISTING_FREQUENCY || context.testAbnormalFrequency) {
+    if (
+      context.forceSignal === FraudSignalCode.ABNORMAL_LISTING_FREQUENCY ||
+      context.testAbnormalFrequency
+    ) {
       const count = context.recentListingsCount || 8;
       return {
         code: FraudSignalCode.ABNORMAL_LISTING_FREQUENCY,
@@ -494,7 +545,10 @@ export class FraudDetectionEngine {
     }
 
     if (!user) {
-      return this._untriggeredSignal(FraudSignalCode.ABNORMAL_LISTING_FREQUENCY, 'No user provided.');
+      return this._untriggeredSignal(
+        FraudSignalCode.ABNORMAL_LISTING_FREQUENCY,
+        'No user provided.'
+      );
     }
 
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -552,7 +606,9 @@ export class FraudDetectionEngine {
       targetId: user._id,
       status: { $in: ['PENDING', 'INVESTIGATING'] },
       category: { $in: ['FRAUD', 'SCAM', 'COUNTERFEIT'] },
-    }).limit(5).lean();
+    })
+      .limit(5)
+      .lean();
 
     if (pendingReports.length > 0) {
       return {
@@ -584,7 +640,10 @@ export class FraudDetectionEngine {
   async checkDocumentTamperingIndicators(asset, context = {}) {
     const meta = FraudSignalMetadata[FraudSignalCode.DOCUMENT_TAMPERING_INDICATORS];
 
-    if (context.forceSignal === FraudSignalCode.DOCUMENT_TAMPERING_INDICATORS || context.testDocumentTampering) {
+    if (
+      context.forceSignal === FraudSignalCode.DOCUMENT_TAMPERING_INDICATORS ||
+      context.testDocumentTampering
+    ) {
       const tool = context.editingTool || 'Adobe Photoshop 2024';
       return {
         code: FraudSignalCode.DOCUMENT_TAMPERING_INDICATORS,
@@ -604,7 +663,10 @@ export class FraudDetectionEngine {
     }
 
     if (!asset) {
-      return this._untriggeredSignal(FraudSignalCode.DOCUMENT_TAMPERING_INDICATORS, 'No asset provided.');
+      return this._untriggeredSignal(
+        FraudSignalCode.DOCUMENT_TAMPERING_INDICATORS,
+        'No asset provided.'
+      );
     }
 
     // Inspect metadata or extracted tampering artifacts

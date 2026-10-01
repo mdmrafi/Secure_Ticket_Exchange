@@ -80,7 +80,9 @@ function assert(condition, testName, details = '') {
 }
 
 async function runTests() {
-  console.log(`\n${colors.bold}${colors.cyan}======================================================`);
+  console.log(
+    `\n${colors.bold}${colors.cyan}======================================================`
+  );
   console.log(`     TRANSACTION SYSTEM & LIFECYCLE TEST SUITE`);
   console.log(`======================================================${colors.reset}\n`);
   console.log(`Target API URL: ${BASE_URL}\n`);
@@ -151,7 +153,9 @@ async function runTests() {
     // -----------------------------------------------------------------
     // SETUP: Assets & Listings
     // -----------------------------------------------------------------
-    console.log(`${colors.yellow}[SETUP] Creating verified assets and active listings...${colors.reset}`);
+    console.log(
+      `${colors.yellow}[SETUP] Creating verified assets and active listings...${colors.reset}`
+    );
 
     // Asset 1 for Successful Transaction Flow
     asset1 = await Asset.create({
@@ -262,19 +266,23 @@ async function runTests() {
     assert(initRes.status === 201, 'POST /transactions initiates exchange (201 Created)');
     const tx1 = initRes.body?.data;
     assert(tx1 != null, 'Transaction object returned');
-    assert(tx1.transactionStatus === TransactionStatus.INITIATED, 'Initial transactionStatus is INITIATED');
+    assert(
+      tx1.transactionStatus === TransactionStatus.INITIATED,
+      'Initial transactionStatus is INITIATED'
+    );
     assert(tx1.paymentStatus === PaymentStatus.PENDING, 'Initial paymentStatus is PENDING');
     assert(tx1.amount === 1350, 'Transaction amount matches listing askingPrice');
-    assert(tx1.buyerId === buyerA._id.toString() || tx1.buyerId?._id === buyerA._id.toString(), 'buyerId matches Alice');
+    assert(
+      tx1.buyerId === buyerA._id.toString() || tx1.buyerId?._id === buyerA._id.toString(),
+      'buyerId matches Alice'
+    );
 
     // Step 2: Create Payment Session
-    const payRes = await apiCall(
-      `/transactions/${tx1._id}/pay`,
-      'POST',
-      {},
-      tokenBuyerA
+    const payRes = await apiCall(`/transactions/${tx1._id}/pay`, 'POST', {}, tokenBuyerA);
+    assert(
+      payRes.status === 200,
+      'POST /transactions/:id/pay initializes checkout session (200 OK)'
     );
-    assert(payRes.status === 200, 'POST /transactions/:id/pay initializes checkout session (200 OK)');
     assert(
       payRes.body?.data?.transaction?.transactionStatus === TransactionStatus.PAYMENT_PENDING,
       'Transaction transitions to PAYMENT_PENDING'
@@ -300,35 +308,24 @@ async function runTests() {
       procRes.body?.data?.transactionStatus === TransactionStatus.PAYMENT_CONFIRMED,
       'Transaction status transitioned to PAYMENT_CONFIRMED'
     );
-    assert(
-      procRes.body?.data?.escrowStatus === 'HELD',
-      'Escrow status updated to HELD'
-    );
+    assert(procRes.body?.data?.escrowStatus === 'HELD', 'Escrow status updated to HELD');
     assert(
       procRes.body?.data?.paymentDetails?.transactionRef != null,
       'Payment reference recorded'
     );
 
     // Step 4: Transfer Asset & Finalize Transaction
-    const transferRes = await apiCall(
-      `/transactions/${tx1._id}/transfer`,
-      'POST',
-      {},
-      tokenBuyerA
+    const transferRes = await apiCall(`/transactions/${tx1._id}/transfer`, 'POST', {}, tokenBuyerA);
+    assert(
+      transferRes.status === 200,
+      'POST /transactions/:id/transfer completes exchange (200 OK)'
     );
-    assert(transferRes.status === 200, 'POST /transactions/:id/transfer completes exchange (200 OK)');
     assert(
       transferRes.body?.data?.transactionStatus === TransactionStatus.COMPLETED,
       'Transaction status reached terminal COMPLETED state'
     );
-    assert(
-      transferRes.body?.data?.escrowStatus === 'RELEASED',
-      'Escrow funds released to seller'
-    );
-    assert(
-      transferRes.body?.data?.completedAt != null,
-      'completedAt timestamp populated'
-    );
+    assert(transferRes.body?.data?.escrowStatus === 'RELEASED', 'Escrow funds released to seller');
+    assert(transferRes.body?.data?.completedAt != null, 'completedAt timestamp populated');
 
     // Assert asset ownership transferred in MongoDB
     const transferredAsset = await Asset.findById(asset1._id);
@@ -343,15 +340,14 @@ async function runTests() {
 
     // Assert listing marked SOLD
     const soldListing = await Listing.findById(listing1._id);
-    assert(
-      soldListing.status === ListingStatus.SOLD,
-      'Listing status updated to SOLD'
-    );
+    assert(soldListing.status === ListingStatus.SOLD, 'Listing status updated to SOLD');
 
     // =================================================================
     // Scenario 2: Strict State Transitions (Prevent Illegal Status Jump)
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 2: Strict State Transitions (Prevent Illegal Jumps)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 2: Strict State Transitions (Prevent Illegal Jumps)${colors.reset}`
+    );
 
     // Create fresh transaction in INITIATED state
     const jumpInitRes = await apiCall(
@@ -361,7 +357,10 @@ async function runTests() {
       tokenBuyerB
     );
     const tx2 = jumpInitRes.body?.data;
-    assert(tx2.transactionStatus === TransactionStatus.INITIATED, 'New transaction in INITIATED status');
+    assert(
+      tx2.transactionStatus === TransactionStatus.INITIATED,
+      'New transaction in INITIATED status'
+    );
 
     // Attempt direct jump: INITIATED -> COMPLETED (bypassing payment and transfer)
     const illegalJumpRes = await apiCall(
@@ -375,8 +374,9 @@ async function runTests() {
       'Direct jump INITIATED -> COMPLETED rejected with 400 Bad Request'
     );
     assert(
-      illegalJumpRes.body?.message?.includes('A transaction must never jump directly from INITIATED to COMPLETED') ||
-      illegalJumpRes.body?.message?.includes('Must be PAYMENT_CONFIRMED'),
+      illegalJumpRes.body?.message?.includes(
+        'A transaction must never jump directly from INITIATED to COMPLETED'
+      ) || illegalJumpRes.body?.message?.includes('Must be PAYMENT_CONFIRMED'),
       'Strict transition guard explains required intermediate steps'
     );
 
@@ -415,7 +415,10 @@ async function runTests() {
       { outcome: 'FAIL', failureReason: 'Insufficient funds on credit card' },
       tokenBuyerA
     );
-    assert(failProcRes.status === 200, 'Failed payment processing returns 200 OK with failure status');
+    assert(
+      failProcRes.status === 200,
+      'Failed payment processing returns 200 OK with failure status'
+    );
     assert(
       failProcRes.body?.data?.paymentStatus === PaymentStatus.FAILED,
       'paymentStatus transitioned to FAILED'
@@ -454,10 +457,7 @@ async function runTests() {
       cancelRes.body?.data?.transactionStatus === TransactionStatus.CANCELLED,
       'transactionStatus is CANCELLED'
     );
-    assert(
-      cancelRes.body?.data?.cancelledAt != null,
-      'cancelledAt timestamp recorded'
-    );
+    assert(cancelRes.body?.data?.cancelledAt != null, 'cancelledAt timestamp recorded');
 
     // Assert listing reverted back to ACTIVE
     const restoredListing = await Listing.findById(listing4._id);
@@ -469,18 +469,16 @@ async function runTests() {
     // =================================================================
     // Scenario 5: Duplicate Payment Callback (Idempotency)
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 5: Duplicate Payment Callback (Idempotency)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 5: Duplicate Payment Callback (Idempotency)${colors.reset}`
+    );
 
     // tx1 was already paid in Scenario 1. Send duplicate payment webhook callback:
-    const dupCallbackRes = await apiCall(
-      `/transactions/${tx1._id}/callback`,
-      'POST',
-      {
-        status: 'PAID',
-        outcome: 'SUCCESS',
-        transactionRef: procRes.body?.data?.paymentDetails?.transactionRef,
-      }
-    );
+    const dupCallbackRes = await apiCall(`/transactions/${tx1._id}/callback`, 'POST', {
+      status: 'PAID',
+      outcome: 'SUCCESS',
+      transactionRef: procRes.body?.data?.paymentDetails?.transactionRef,
+    });
 
     assert(dupCallbackRes.status === 200, 'Duplicate payment callback returns 200 OK');
     assert(
@@ -495,7 +493,9 @@ async function runTests() {
     // =================================================================
     // Scenario 6: Unauthorized Transaction Access Protection
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 6: Unauthorized Transaction Access Protection${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 6: Unauthorized Transaction Access Protection${colors.reset}`
+    );
 
     // Charlie (uninvolved) attempts to view tx1 (between Alice and Sam)
     const unauthorizedGetRes = await apiCall(
@@ -509,7 +509,9 @@ async function runTests() {
       'Uninvolved user accessing transaction rejected with 403 Forbidden'
     );
     assert(
-      unauthorizedGetRes.body?.message?.includes('not authorized to view or manage this transaction'),
+      unauthorizedGetRes.body?.message?.includes(
+        'not authorized to view or manage this transaction'
+      ),
       'Access control error boundary explained'
     );
 
@@ -526,26 +528,18 @@ async function runTests() {
     );
 
     // Alice (buyer) successfully retrieves own transaction details
-    const aliceGetRes = await apiCall(
-      `/transactions/${tx1._id}`,
-      'GET',
-      null,
-      tokenBuyerA
-    );
+    const aliceGetRes = await apiCall(`/transactions/${tx1._id}`, 'GET', null, tokenBuyerA);
     assert(aliceGetRes.status === 200, 'Buyer Alice retrieves own transaction (200 OK)');
     assert(aliceGetRes.body?.data?._id === tx1._id, 'Returns matching transaction ID');
 
     // =================================================================
     // Scenario 7: Immutable Transaction History / Event Log Verification
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 7: Immutable Transaction Event History & Log${colors.reset}`);
-
-    const eventsRes = await apiCall(
-      `/transactions/${tx1._id}/events`,
-      'GET',
-      null,
-      tokenBuyerA
+    console.log(
+      `\n${colors.bold}Scenario 7: Immutable Transaction Event History & Log${colors.reset}`
     );
+
+    const eventsRes = await apiCall(`/transactions/${tx1._id}/events`, 'GET', null, tokenBuyerA);
     assert(eventsRes.status === 200, 'GET /transactions/:id/events returns 200 OK');
     const events = eventsRes.body?.data;
     assert(Array.isArray(events), 'Events list is an array');
@@ -553,7 +547,9 @@ async function runTests() {
 
     // Verify sequence: TRANSACTION_INITIATED -> PAYMENT_SESSION_CREATED -> PAYMENT_CONFIRMED -> TRANSFER_PENDING -> TRANSACTION_COMPLETED
     const eventTypes = events.map((e) => e.eventType);
-    console.log(`  ${colors.cyan}Audit event log sequence: [${eventTypes.join(' -> ')}]${colors.reset}`);
+    console.log(
+      `  ${colors.cyan}Audit event log sequence: [${eventTypes.join(' -> ')}]${colors.reset}`
+    );
 
     assert(
       eventTypes.includes('TRANSACTION_INITIATED'),
@@ -563,14 +559,8 @@ async function runTests() {
       eventTypes.includes('PAYMENT_SESSION_CREATED'),
       'Audit log contains PAYMENT_SESSION_CREATED'
     );
-    assert(
-      eventTypes.includes('PAYMENT_CONFIRMED'),
-      'Audit log contains PAYMENT_CONFIRMED'
-    );
-    assert(
-      eventTypes.includes('TRANSFER_PENDING'),
-      'Audit log contains TRANSFER_PENDING'
-    );
+    assert(eventTypes.includes('PAYMENT_CONFIRMED'), 'Audit log contains PAYMENT_CONFIRMED');
+    assert(eventTypes.includes('TRANSFER_PENDING'), 'Audit log contains TRANSFER_PENDING');
     assert(
       eventTypes.includes('TRANSACTION_COMPLETED'),
       'Audit log contains TRANSACTION_COMPLETED'
@@ -593,7 +583,6 @@ async function runTests() {
       immutabilityGuarded,
       'TransactionEvent collection strictly blocks mutation/update (immutability preserved)'
     );
-
   } catch (err) {
     console.error(`${colors.red}Unhandled test suite exception:${colors.reset}`, err);
     failedCount++;
@@ -626,9 +615,15 @@ async function runTests() {
     await mongoose.disconnect();
     console.log(`${colors.blue}Database disconnected cleanly.${colors.reset}\n`);
 
-    console.log(`${colors.bold}${colors.cyan}======================================================`);
-    console.log(`TEST SUMMARY: ${colors.green}${passedCount} passed${colors.cyan}, ${failedCount > 0 ? colors.red : colors.green}${failedCount} failed${colors.reset}`);
-    console.log(`${colors.bold}${colors.cyan}======================================================${colors.reset}\n`);
+    console.log(
+      `${colors.bold}${colors.cyan}======================================================`
+    );
+    console.log(
+      `TEST SUMMARY: ${colors.green}${passedCount} passed${colors.cyan}, ${failedCount > 0 ? colors.red : colors.green}${failedCount} failed${colors.reset}`
+    );
+    console.log(
+      `${colors.bold}${colors.cyan}======================================================${colors.reset}\n`
+    );
 
     if (failedCount > 0) {
       process.exit(1);

@@ -20,11 +20,7 @@ export const registerSchema = z.object({
       .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
       .regex(/[0-9]/, 'Password must contain at least one number')
       .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
-    phone: z
-      .string()
-      .trim()
-      .optional()
-      .default(''),
+    phone: z.string().trim().optional().default(''),
   }),
 });
 
@@ -35,9 +31,7 @@ export const loginSchema = z.object({
       .trim()
       .email('Please provide a valid email address')
       .toLowerCase(),
-    password: z
-      .string({ required_error: 'Password is required' })
-      .min(1, 'Password is required'),
+    password: z.string({ required_error: 'Password is required' }).min(1, 'Password is required'),
   }),
 });
 

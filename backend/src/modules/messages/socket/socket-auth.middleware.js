@@ -34,7 +34,10 @@ export const socketAuthMiddleware = async (socket, next) => {
     }
 
     if (!token) {
-      logger.warn({ socketId: socket.id }, 'Socket connection rejected: No authentication token provided');
+      logger.warn(
+        { socketId: socket.id },
+        'Socket connection rejected: No authentication token provided'
+      );
       return next(new Error('Authentication error: Missing authentication token'));
     }
 

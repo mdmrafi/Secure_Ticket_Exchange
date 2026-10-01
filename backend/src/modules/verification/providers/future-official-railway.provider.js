@@ -17,7 +17,10 @@ export class FutureOfficialRailwayAPIProvider extends RailwayVerificationProvide
     super();
     this.name = 'official-bangladesh-railway-api';
     this.apiKey = config.apiKey || process.env.RAILWAY_OFFICIAL_API_KEY || '';
-    this.baseUrl = config.baseUrl || process.env.RAILWAY_OFFICIAL_API_BASE_URL || 'https://api.railway.gov.bd/v1';
+    this.baseUrl =
+      config.baseUrl ||
+      process.env.RAILWAY_OFFICIAL_API_BASE_URL ||
+      'https://api.railway.gov.bd/v1';
   }
 
   getName() {
@@ -35,7 +38,9 @@ export class FutureOfficialRailwayAPIProvider extends RailwayVerificationProvide
 
     // If official credentials are not yet configured in environment, route to manual review
     if (!this.apiKey) {
-      logger.warn('[FutureOfficialRailwayAPIProvider] Official API credentials not configured; routing to manual review fallback');
+      logger.warn(
+        '[FutureOfficialRailwayAPIProvider] Official API credentials not configured; routing to manual review fallback'
+      );
       return {
         status: VerificationStatus.MANUAL_REVIEW,
         ticketExists: null,

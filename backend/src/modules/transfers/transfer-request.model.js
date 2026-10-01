@@ -93,21 +93,12 @@ const transferRequestSchema = new mongoose.Schema(
 );
 
 // Compound indexes for performant lookups and race prevention
-transferRequestSchema.index(
-  { assetId: 1, status: 1 },
-  { name: 'idx_transfer_asset_status' }
-);
+transferRequestSchema.index({ assetId: 1, status: 1 }, { name: 'idx_transfer_asset_status' });
 transferRequestSchema.index(
   { fromUserId: 1, status: 1 },
   { name: 'idx_transfer_from_user_status' }
 );
-transferRequestSchema.index(
-  { toUserId: 1, status: 1 },
-  { name: 'idx_transfer_to_user_status' }
-);
-transferRequestSchema.index(
-  { transactionId: 1 },
-  { name: 'idx_transfer_transaction_id' }
-);
+transferRequestSchema.index({ toUserId: 1, status: 1 }, { name: 'idx_transfer_to_user_status' });
+transferRequestSchema.index({ transactionId: 1 }, { name: 'idx_transfer_transaction_id' });
 
 export const TransferRequest = mongoose.model('TransferRequest', transferRequestSchema);

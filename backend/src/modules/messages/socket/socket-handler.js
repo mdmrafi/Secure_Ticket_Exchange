@@ -62,7 +62,10 @@ export const registerSocketHandler = (io, socket) => {
       const auth = await messageService.verifyRoomAuthorization(roomId, userId, userRole);
 
       socket.join(roomId);
-      logger.debug({ userId, socketId: socket.id, roomId }, 'User joined authorized conversation room');
+      logger.debug(
+        { userId, socketId: socket.id, roomId },
+        'User joined authorized conversation room'
+      );
 
       socket.to(roomId).emit('room:user_joined', {
         userId,
@@ -80,7 +83,10 @@ export const registerSocketHandler = (io, socket) => {
         });
       }
     } catch (error) {
-      logger.warn({ userId, socketId: socket.id, roomId, err: error.message }, 'Unauthorized room join attempt blocked');
+      logger.warn(
+        { userId, socketId: socket.id, roomId, err: error.message },
+        'Unauthorized room join attempt blocked'
+      );
       if (typeof callback === 'function') {
         callback({
           success: false,

@@ -32,7 +32,9 @@ try {
   console.log(`- Host: ${mongoose.connection.host}`);
   console.log(`- Port: ${mongoose.connection.port}`);
   console.log(`- Database Name: ${mongoose.connection.name}`);
-  console.log(`- Connection State: ${mongoose.connection.readyState === 1 ? 'READY (1)' : mongoose.connection.readyState}`);
+  console.log(
+    `- Connection State: ${mongoose.connection.readyState === 1 ? 'READY (1)' : mongoose.connection.readyState}`
+  );
   console.log(`- Ping Latency: ${latency}ms`);
   console.log(`- Ping Response:`, pingResult);
   console.log('\nDatabase connection layer is functioning as expected.');
@@ -50,7 +52,9 @@ try {
   console.log('   - Windows Service: Run `net start MongoDB` or check Services app.');
   console.log('   - Docker: `docker run -d -p 27017:27017 --name mongo mongo:latest`');
   console.log('2. If using MongoDB Atlas, set MONGODB_URI in backend/.env:');
-  console.log('   - Example: MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.mongodb.net/secure_asset_exchange?retryWrites=true&w=majority');
+  console.log(
+    '   - Example: MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.mongodb.net/secure_asset_exchange?retryWrites=true&w=majority'
+  );
   console.log('3. Ensure your IP address is whitelisted in Atlas Network Access.\n');
 
   process.exit(1);

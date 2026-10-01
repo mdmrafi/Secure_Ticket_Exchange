@@ -82,7 +82,9 @@ function connectSocket(token, extraOptions = {}) {
 }
 
 async function runTests() {
-  console.log(`\n${colors.bold}${colors.cyan}======================================================`);
+  console.log(
+    `\n${colors.bold}${colors.cyan}======================================================`
+  );
   console.log(`     SOCKET.IO AUTHENTICATED MESSAGING TEST SUITE`);
   console.log(`======================================================${colors.reset}\n`);
   console.log(`Target Socket.IO Server: ${SOCKET_URL}\n`);
@@ -105,7 +107,9 @@ async function runTests() {
     // -----------------------------------------------------------------
     // SETUP: Users & Transaction Fixtures
     // -----------------------------------------------------------------
-    console.log(`${colors.yellow}[SETUP] Creating test users, assets, and transactions...${colors.reset}`);
+    console.log(
+      `${colors.yellow}[SETUP] Creating test users, assets, and transactions...${colors.reset}`
+    );
 
     seller = await User.create({
       name: 'Socket Seller Sam',
@@ -174,32 +178,30 @@ async function runTests() {
     });
 
     const txRoomId = `tx:${transaction._id}`;
-    console.log(`${colors.green}Test fixtures initialized successfully. Target Room: ${txRoomId}${colors.reset}\n`);
+    console.log(
+      `${colors.green}Test fixtures initialized successfully. Target Room: ${txRoomId}${colors.reset}\n`
+    );
 
     // -----------------------------------------------------------------
     // Scenario 1: Authentication Connection & Unauthenticated Rejection
     // -----------------------------------------------------------------
-    console.log(`${colors.bold}Scenario 1: Authenticated Connection & Unauthenticated Rejection${colors.reset}`);
+    console.log(
+      `${colors.bold}Scenario 1: Authenticated Connection & Unauthenticated Rejection${colors.reset}`
+    );
 
     // Part A: Unauthenticated connection attempt (no token)
     const unauthResult = await connectSocket(null);
-    assert(
-      Boolean(unauthResult.error),
-      'Unauthenticated socket connection rejected'
-    );
+    assert(Boolean(unauthResult.error), 'Unauthenticated socket connection rejected');
     assert(
       unauthResult.error?.message?.includes('Authentication error') ||
-      unauthResult.error?.message?.includes('Missing authentication token'),
+        unauthResult.error?.message?.includes('Missing authentication token'),
       'Clear authentication error message returned on missing token'
     );
     if (unauthResult.socket?.close) unauthResult.socket.close();
 
     // Part B: Invalid token connection attempt
     const invalidTokenResult = await connectSocket('invalid_malformed_token_xyz');
-    assert(
-      Boolean(invalidTokenResult.error),
-      'Connection with invalid JWT token rejected'
-    );
+    assert(Boolean(invalidTokenResult.error), 'Connection with invalid JWT token rejected');
     if (invalidTokenResult.socket?.close) invalidTokenResult.socket.close();
 
     // Part C: Authenticated connections for Buyer and Seller
@@ -218,7 +220,9 @@ async function runTests() {
     // -----------------------------------------------------------------
     // Scenario 2: Identity Derivation (Never Trust Client-Supplied userId)
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 2: Identity Derivation from Authenticated Socket${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 2: Identity Derivation from Authenticated Socket${colors.reset}`
+    );
 
     // Join authorized transaction room first
     await new Promise((resolve) => {
@@ -269,13 +273,16 @@ async function runTests() {
       'Unauthorized user blocked from joining private transaction room'
     );
     assert(
-      unauthorizedTxJoin.error?.includes('Unauthorized') || unauthorizedTxJoin.error?.includes('not a party'),
+      unauthorizedTxJoin.error?.includes('Unauthorized') ||
+        unauthorizedTxJoin.error?.includes('not a party'),
       'Authorization boundary explanation returned'
     );
 
     // 2. Eavesdropper attempts to join an arbitrary room (e.g. secret_admin_channel)
     const arbitraryRoomJoin = await new Promise((resolve) => {
-      socketEavesdropper.emit('room:join', { roomId: 'secret_admin_backdoor' }, (response) => resolve(response));
+      socketEavesdropper.emit('room:join', { roomId: 'secret_admin_backdoor' }, (response) =>
+        resolve(response)
+      );
     });
     assert(
       arbitraryRoomJoin.success === false,
@@ -284,7 +291,9 @@ async function runTests() {
 
     // 3. Eavesdropper attempts to join Buyer Bob's personal notifications room (user:<id>)
     const stolenInboxJoin = await new Promise((resolve) => {
-      socketEavesdropper.emit('room:join', { roomId: `user:${buyer._id}` }, (response) => resolve(response));
+      socketEavesdropper.emit('room:join', { roomId: `user:${buyer._id}` }, (response) =>
+        resolve(response)
+      );
     });
     assert(
       stolenInboxJoin.success === false,
@@ -295,12 +304,17 @@ async function runTests() {
     const sellerTxJoin = await new Promise((resolve) => {
       socketSeller.emit('room:join', { roomId: txRoomId }, (response) => resolve(response));
     });
-    assert(sellerTxJoin.success === true, 'Authorized Seller Sam successfully joined transaction room');
+    assert(
+      sellerTxJoin.success === true,
+      'Authorized Seller Sam successfully joined transaction room'
+    );
 
     // -----------------------------------------------------------------
     // Scenario 4: Real-Time Message Delivery
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 4: Real-Time Message Delivery & Online Status${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 4: Real-Time Message Delivery & Online Status${colors.reset}`
+    );
 
     // Setup listener on Seller socket for real-time delivery
     const deliveryPromise = new Promise((resolve) => {
@@ -356,13 +370,19 @@ async function runTests() {
     // Buyer starts typing
     socketBuyer.emit('typing:start', { roomId: txRoomId });
     const typingStartEvent = await typingStartPromise;
-    assert(typingStartEvent.userId === buyer._id.toString(), 'Seller received typing:start for Buyer Bob');
+    assert(
+      typingStartEvent.userId === buyer._id.toString(),
+      'Seller received typing:start for Buyer Bob'
+    );
     assert(typingStartEvent.roomId === txRoomId, 'Typing indicator scoped to transaction room');
 
     // Buyer stops typing
     socketBuyer.emit('typing:stop', { roomId: txRoomId });
     const typingStopEvent = await typingStopPromise;
-    assert(typingStopEvent.userId === buyer._id.toString(), 'Seller received typing:stop for Buyer Bob');
+    assert(
+      typingStopEvent.userId === buyer._id.toString(),
+      'Seller received typing:stop for Buyer Bob'
+    );
 
     // -----------------------------------------------------------------
     // Scenario 6: Read Receipts
@@ -377,14 +397,22 @@ async function runTests() {
 
     // Seller reads the message
     const readAck = await new Promise((resolve) => {
-      socketSeller.emit('message:read', { messageId: messageToReadId, roomId: txRoomId }, (res) => resolve(res));
+      socketSeller.emit('message:read', { messageId: messageToReadId, roomId: txRoomId }, (res) =>
+        resolve(res)
+      );
     });
     assert(readAck.success === true, 'Seller read acknowledgement returned success');
 
     // Buyer receives read receipt event
     const readReceiptEvent = await readReceiptPromise;
-    assert(readReceiptEvent.messageId.toString() === messageToReadId.toString(), 'Buyer received message:read event');
-    assert(readReceiptEvent.readBy === seller._id.toString(), 'Read receipt specifies Seller Sam as reader');
+    assert(
+      readReceiptEvent.messageId.toString() === messageToReadId.toString(),
+      'Buyer received message:read event'
+    );
+    assert(
+      readReceiptEvent.readBy === seller._id.toString(),
+      'Read receipt specifies Seller Sam as reader'
+    );
 
     // Verify DB update
     const dbMsg = await ChatMessage.findById(messageToReadId);
@@ -394,7 +422,9 @@ async function runTests() {
     // -----------------------------------------------------------------
     // Scenario 7: Offline Message Persistence & Retrieval
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 7: Offline Message Persistence & Retrieval${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 7: Offline Message Persistence & Retrieval${colors.reset}`
+    );
 
     // Disconnect Seller socket to simulate going offline
     socketSeller.disconnect();
@@ -402,7 +432,9 @@ async function runTests() {
 
     // Query online status for Seller
     const statusQuery = await new Promise((resolve) => {
-      socketBuyer.emit('user:status', { targetUserId: seller._id.toString() }, (res) => resolve(res));
+      socketBuyer.emit('user:status', { targetUserId: seller._id.toString() }, (res) =>
+        resolve(res)
+      );
     });
     assert(statusQuery.online === false, 'Seller status confirmed offline');
 
@@ -419,7 +451,10 @@ async function runTests() {
       );
     });
 
-    assert(offlineMsgSend.success === true, 'Message successfully queued and persisted while recipient was offline');
+    assert(
+      offlineMsgSend.success === true,
+      'Message successfully queued and persisted while recipient was offline'
+    );
     assert(
       offlineMsgSend.message.status === MessageDeliveryStatus.SENT,
       'Initial status for offline recipient is SENT (not delivered)'
@@ -428,7 +463,10 @@ async function runTests() {
     // Verify persistence in MongoDB
     const persistedOfflineMsg = await ChatMessage.findById(offlineMsgSend.message._id);
     assert(Boolean(persistedOfflineMsg), 'Offline message successfully persisted in MongoDB');
-    assert(persistedOfflineMsg.status === MessageDeliveryStatus.SENT, 'Persisted status in DB is SENT');
+    assert(
+      persistedOfflineMsg.status === MessageDeliveryStatus.SENT,
+      'Persisted status in DB is SENT'
+    );
 
     // Seller reconnects
     socketSeller = await connectSocket(tokenSeller);
@@ -452,23 +490,33 @@ async function runTests() {
     // -----------------------------------------------------------------
     // Scenario 8: REST API History & Access Control
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 8: REST API Message Endpoints & Authorization${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 8: REST API Message Endpoints & Authorization${colors.reset}`
+    );
 
-    const restHeaders = { 'Authorization': `Bearer ${tokenBuyer}` };
-    const restRes = await fetch(`${BASE_URL}/messages/history?roomId=${encodeURIComponent(txRoomId)}`, {
-      headers: restHeaders,
-    });
+    const restHeaders = { Authorization: `Bearer ${tokenBuyer}` };
+    const restRes = await fetch(
+      `${BASE_URL}/messages/history?roomId=${encodeURIComponent(txRoomId)}`,
+      {
+        headers: restHeaders,
+      }
+    );
     const restJson = await restRes.json();
 
     assert(restRes.status === 200, 'GET /api/v1/messages/history returns 200 OK for Buyer');
     assert(restJson.data?.messages?.length >= 3, 'REST API returns complete conversation history');
 
     // Eavesdropper attempting to fetch history via REST
-    const unauthRestRes = await fetch(`${BASE_URL}/messages/history?roomId=${encodeURIComponent(txRoomId)}`, {
-      headers: { 'Authorization': `Bearer ${tokenEavesdropper}` },
-    });
-    assert(unauthRestRes.status === 403, 'Unauthorized user fetching history via REST rejected with 403 Forbidden');
-
+    const unauthRestRes = await fetch(
+      `${BASE_URL}/messages/history?roomId=${encodeURIComponent(txRoomId)}`,
+      {
+        headers: { Authorization: `Bearer ${tokenEavesdropper}` },
+      }
+    );
+    assert(
+      unauthRestRes.status === 403,
+      'Unauthorized user fetching history via REST rejected with 403 Forbidden'
+    );
   } catch (error) {
     console.error(`\n${colors.red}Unhandled error during tests:${colors.reset}`, error);
     failedCount++;
@@ -476,7 +524,9 @@ async function runTests() {
     // -----------------------------------------------------------------
     // CLEANUP
     // -----------------------------------------------------------------
-    console.log(`\n${colors.yellow}[CLEANUP] Disconnecting sockets and cleaning up test fixtures...${colors.reset}`);
+    console.log(
+      `\n${colors.yellow}[CLEANUP] Disconnecting sockets and cleaning up test fixtures...${colors.reset}`
+    );
     try {
       if (socketBuyer?.connected) socketBuyer.disconnect();
       if (socketSeller?.connected) socketSeller.disconnect();

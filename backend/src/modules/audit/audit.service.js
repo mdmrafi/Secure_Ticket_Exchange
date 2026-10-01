@@ -22,19 +22,34 @@ export class AuditService {
         return { entityType: 'LISTING', entityId: String(data.listingId || data.id || 'unknown') };
       case 'transaction.created':
       case 'admin.transaction.frozen':
-        return { entityType: 'TRANSACTION', entityId: String(data.transactionId || data.id || 'unknown') };
+        return {
+          entityType: 'TRANSACTION',
+          entityId: String(data.transactionId || data.id || 'unknown'),
+        };
       case 'payment.completed':
-        return { entityType: 'PAYMENT', entityId: String(data.transactionId || data.paymentId || 'unknown') };
+        return {
+          entityType: 'PAYMENT',
+          entityId: String(data.transactionId || data.paymentId || 'unknown'),
+        };
       case 'transfer.completed':
-        return { entityType: 'TRANSFER', entityId: String(data.transferId || data.assetId || 'unknown') };
+        return {
+          entityType: 'TRANSFER',
+          entityId: String(data.transferId || data.assetId || 'unknown'),
+        };
       case 'fraud.detected':
-        return { entityType: 'FRAUD', entityId: String(data.targetId || data.assessmentId || 'unknown') };
+        return {
+          entityType: 'FRAUD',
+          entityId: String(data.targetId || data.assessmentId || 'unknown'),
+        };
       case 'report.created':
       case 'admin.report.resolved':
         return { entityType: 'REPORT', entityId: String(data.reportId || data.id || 'unknown') };
       case 'admin.verification.approved':
       case 'admin.verification.rejected':
-        return { entityType: 'VERIFICATION', entityId: String(data.verificationId || data.id || 'unknown') };
+        return {
+          entityType: 'VERIFICATION',
+          entityId: String(data.verificationId || data.id || 'unknown'),
+        };
       default:
         return { entityType: 'SYSTEM', entityId: String(data.id || 'unknown') };
     }

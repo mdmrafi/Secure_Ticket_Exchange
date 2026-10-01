@@ -29,7 +29,9 @@ export class AdminRepository {
       Transaction.countDocuments(),
       Report.countDocuments({ status: 'PENDING' }),
       KYCRecord.countDocuments({ status: { $in: ['PENDING', 'MANUAL_REVIEW'] } }),
-      Verification.countDocuments({ status: { $in: ['SUBMITTED', 'MANUAL_REVIEW', 'PROCESSING'] } }),
+      Verification.countDocuments({
+        status: { $in: ['SUBMITTED', 'MANUAL_REVIEW', 'PROCESSING'] },
+      }),
       FraudAssessment.countDocuments({ riskLevel: { $in: ['HIGH', 'CRITICAL'] } }),
     ]);
 

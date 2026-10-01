@@ -11,7 +11,10 @@ export const createAssetSchema = z.object({
     title: z.string().min(1, 'Title cannot be empty').optional(),
     description: z.string().optional(),
     uniqueAssetIdentifier: z.string().min(1, 'Identifier cannot be empty').optional(),
-    originalValue: z.number().nonnegative('Original value must be greater than or equal to zero').optional(),
+    originalValue: z
+      .number()
+      .nonnegative('Original value must be greater than or equal to zero')
+      .optional(),
     currency: z.string().optional().default('BDT'),
     metadata: z.record(z.any()).optional().default({}),
   }),

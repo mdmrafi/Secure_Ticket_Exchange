@@ -5,8 +5,18 @@ import { assetRepository } from './asset.repository.js';
 import { createAssetDomain } from './types/index.js';
 import { documentProcessor } from '../ocr/document-processor.js';
 import { ExtractionStatus } from './constants/ingestion.constant.js';
-import { NotFoundError, ConflictError, ForbiddenError, BadRequestError, UnauthorizedError } from '../../common/errors/index.js';
-import { AssetTypes, AssetStatus, VerificationStatus } from '../../common/constants/asset-types.constant.js';
+import {
+  NotFoundError,
+  ConflictError,
+  ForbiddenError,
+  BadRequestError,
+  UnauthorizedError,
+} from '../../common/errors/index.js';
+import {
+  AssetTypes,
+  AssetStatus,
+  VerificationStatus,
+} from '../../common/constants/asset-types.constant.js';
 import { logger } from '../../config/logger.config.js';
 import { publishEvent } from '../../jobs/publisher.js';
 import { EventNames } from '../../common/constants/events.constant.js';
@@ -41,7 +51,10 @@ export class AssetService {
     const payload = domainAsset.toPersistence();
 
     // 3. Prevent duplicate unique identifier for this asset type
-    const existing = await this.repo.findByIdentifier(payload.assetType, payload.uniqueAssetIdentifier);
+    const existing = await this.repo.findByIdentifier(
+      payload.assetType,
+      payload.uniqueAssetIdentifier
+    );
     if (existing) {
       throw new ConflictError(
         `An asset with identifier '${payload.uniqueAssetIdentifier}' is already registered under asset type '${payload.assetType}'`
@@ -103,7 +116,7 @@ export class AssetService {
 
     if (!isOwner && !isAdmin) {
       throw new ForbiddenError(
-        'Forbidden: You are not authorized to view another user\'s private asset'
+        "Forbidden: You are not authorized to view another user's private asset"
       );
     }
 
@@ -151,7 +164,7 @@ export class AssetService {
     // Strict ownership authorization guard
     if (!isOwner && !isAdmin) {
       throw new ForbiddenError(
-        'Forbidden: You can only delete your own assets. Modifying another user\'s asset is strictly prohibited.'
+        "Forbidden: You can only delete your own assets. Modifying another user's asset is strictly prohibited."
       );
     }
 
@@ -203,14 +216,12 @@ export class AssetService {
 
     if (!isOwner && !isAdmin) {
       throw new ForbiddenError(
-        'Forbidden: You can only modify your own assets. Modifying another user\'s asset is strictly prohibited.'
+        "Forbidden: You can only modify your own assets. Modifying another user's asset is strictly prohibited."
       );
     }
 
     if (asset.status === AssetStatus.TRANSFERRED || asset.status === AssetStatus.ESCROWED) {
-      throw new BadRequestError(
-        `Cannot modify asset while in status '${asset.status}'`
-      );
+      throw new BadRequestError(`Cannot modify asset while in status '${asset.status}'`);
     }
 
     return this.repo.updateById(id, updateData);
@@ -276,17 +287,24 @@ export class AssetService {
       options,
     });
 
-    const { extractionStatus, ocrConfidence, extractedFields, provider, processingNotes } = ocrProcessing;
+    const { extractionStatus, ocrConfidence, extractedFields, provider, processingNotes } =
+      ocrProcessing;
 
     // 2. Generate unique identifier for the asset
     const randomSuffix = crypto.randomUUID().slice(0, 8);
     const pnr = extractedFields.pnr || options.pnr;
     const ticketNumber = extractedFields.ticketNumber || options.ticketNumber;
-    let uniqueAssetIdentifier =
-      pnr ? `RAIL-PNR-${pnr}` : (ticketNumber ? `RAIL-TKT-${ticketNumber}` : `RAIL-DOC-${Date.now()}-${randomSuffix}`);
+    let uniqueAssetIdentifier = pnr
+      ? `RAIL-PNR-${pnr}`
+      : ticketNumber
+        ? `RAIL-TKT-${ticketNumber}`
+        : `RAIL-DOC-${Date.now()}-${randomSuffix}`;
 
     // If identifier already exists for another asset, ensure uniqueness with suffix
-    const existing = await this.repo.findByIdentifier(AssetTypes.RAILWAY_TICKET, uniqueAssetIdentifier);
+    const existing = await this.repo.findByIdentifier(
+      AssetTypes.RAILWAY_TICKET,
+      uniqueAssetIdentifier
+    );
     if (existing) {
       uniqueAssetIdentifier = `${uniqueAssetIdentifier}-${randomSuffix}`;
     }
@@ -318,7 +336,8 @@ export class AssetService {
     // 4. Generate human-readable title
     let title = 'Railway Ticket';
     if (metadata.source && metadata.destination) {
-      title = `Train ${metadata.trainNumber || ''}: ${metadata.source} -> ${metadata.destination}`.trim();
+      title =
+        `Train ${metadata.trainNumber || ''}: ${metadata.source} -> ${metadata.destination}`.trim();
     } else if (metadata.pnr) {
       title = `Railway Ticket - PNR: ${metadata.pnr}`;
     }
@@ -387,7 +406,7 @@ export class AssetService {
     // Strict ownership boundary: never expose another user's document
     if (!isOwner && !isAdmin) {
       throw new ForbiddenError(
-        'Forbidden: You are not authorized to access document files of another user\'s asset.'
+        "Forbidden: You are not authorized to access document files of another user's asset."
       );
     }
 

@@ -48,9 +48,7 @@ export class ReportService {
       const isAdminOrMod = ['ADMIN', 'MODERATOR'].includes(requestingUser.role);
 
       if (!isReporter && !isAdminOrMod) {
-        throw new ForbiddenError(
-          'Forbidden: You are not authorized to view another user\'s report'
-        );
+        throw new ForbiddenError("Forbidden: You are not authorized to view another user's report");
       }
     }
 

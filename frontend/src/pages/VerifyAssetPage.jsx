@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { ShieldCheck, UploadCloud, CheckCircle2, AlertCircle, FileText, Cpu, ArrowRight } from 'lucide-react';
+import {
+  ShieldCheck,
+  UploadCloud,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  Cpu,
+  ArrowRight,
+} from 'lucide-react';
 import { apiService } from '../services/api.service.js';
 
 export const VerifyAssetPage = () => {
@@ -38,7 +46,8 @@ export const VerifyAssetPage = () => {
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-white">Asset Verification Engine</h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">
-          Automated fraud detection pipeline verifying railway tickets, bus passes, and legal digital assets.
+          Automated fraud detection pipeline verifying railway tickets, bus passes, and legal
+          digital assets.
         </p>
       </div>
 
@@ -52,7 +61,9 @@ export const VerifyAssetPage = () => {
                 onChange={(e) => setAssetType(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
               >
-                <option value="RAILWAY_TICKET">Railway Ticket (Bangladesh Railway / E-Ticket)</option>
+                <option value="RAILWAY_TICKET">
+                  Railway Ticket (Bangladesh Railway / E-Ticket)
+                </option>
                 <option value="BUS_TICKET">Intercity Bus Ticket</option>
                 <option value="EVENT_TICKET">Event / Concert Pass</option>
                 <option value="DOCUMENT">Digital Transferable Document</option>
@@ -60,7 +71,9 @@ export const VerifyAssetPage = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-2">Unique Identifier / PNR Number</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-2">
+                Unique Identifier / PNR Number
+              </label>
               <input
                 type="text"
                 placeholder="e.g. 5839201948 or HASH-098"
@@ -74,8 +87,12 @@ export const VerifyAssetPage = () => {
           <div className="p-8 border-2 border-dashed border-slate-700/80 rounded-2xl text-center space-y-3 bg-slate-950/40">
             <UploadCloud className="w-10 h-10 text-slate-500 mx-auto" />
             <div>
-              <span className="text-xs font-semibold text-slate-300 block">Upload Official E-Ticket PDF or Pass</span>
-              <span className="text-[11px] text-slate-500">Supports PDF, PNG, JPG (parsed by OCR & Digital Signature Verifier)</span>
+              <span className="text-xs font-semibold text-slate-300 block">
+                Upload Official E-Ticket PDF or Pass
+              </span>
+              <span className="text-[11px] text-slate-500">
+                Supports PDF, PNG, JPG (parsed by OCR & Digital Signature Verifier)
+              </span>
             </div>
           </div>
 
@@ -112,9 +129,14 @@ export const VerifyAssetPage = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               {verificationResult.checks.map((chk, idx) => (
-                <div key={idx} className="p-2.5 rounded-lg bg-slate-950/50 border border-slate-800 flex items-center justify-between">
+                <div
+                  key={idx}
+                  className="p-2.5 rounded-lg bg-slate-950/50 border border-slate-800 flex items-center justify-between"
+                >
                   <span className="text-slate-300">{chk.name}</span>
-                  <span className="text-emerald-400 font-semibold text-[11px]">PASS ({chk.score}%)</span>
+                  <span className="text-emerald-400 font-semibold text-[11px]">
+                    PASS ({chk.score}%)
+                  </span>
                 </div>
               ))}
             </div>

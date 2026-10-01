@@ -1,0 +1,196 @@
+name: CI/CD Pipeline - Secure Digital Asset Exchange
+
+on:
+  push:
+    branches: [main, staging, develop]
+  pull_request:
+    branches: [main, staging]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment Environment Target'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # 1. Quality, Linting & Security Auditing
+  # ============================================================================
+  code-quality:
+    name: Lint, Format & Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd backend && npm ci
+          cd ../frontend && npm ci
+
+      - name: Check code formatting (Prettier)
+        run: npm run format:check
+
+      - name: Run fast static linting (Oxlint)
+        run: npm run lint
+
+      - name: Audit npm dependencies for security vulnerabilities
+        run: npm run audit
+
+  # ============================================================================
+  # 2. Automated Test Suite & Application Compilation
+  # ============================================================================
+  test-and-build:
+    name: Automated Tests & Builds
+    needs: code-quality
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      PORT: 5000
+      MONGODB_URI: mongodb://localhost:27017/secure_exchange_ci
+      JWT_ACCESS_SECRET: test_ci_super_secret_access_token_key_1234567890_min32
+      JWT_REFRESH_SECRET: test_ci_super_secret_refresh_token_key_1234567890_min32
+      INTERNAL_ENCRYPTION_KEY: test_ci_super_encryption_key_1234567890_min32
+      PAYMENT_WEBHOOK_SECRET: test_ci_payment_webhook_secret_key_1234567890_min32
+      ADMIN_BOOTSTRAP_TOKEN: test_ci_admin_bootstrap_secret_token_1234567890_min32
+      METRICS_AUTH_TOKEN: test_ci_metrics_auth_token_key_1234567890_min32
+      CORS_ORIGIN: http://localhost:5173
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd backend && npm ci
+          cd ../frontend && npm ci
+
+      - name: Backend syntax verification & build validation
+        run: npm run build --prefix backend
+
+      - name: Frontend production build compilation
+        run: npm run build --prefix frontend
+
+      - name: Run Database Connection Test
+        run: node scripts/test-db-connection.js
+        working-directory: ./backend
+
+      - name: Run Payment Abstraction & Security Tests
+        run: node scripts/test-payment-abstraction.js
+        working-directory: ./backend
+
+      - name: Run Backend Security Hardening & Penetration Tests
+        run: node scripts/test-security-hardening.js
+        working-directory: ./backend
+
+      - name: Run Admin Moderation & RBAC Tests
+        run: node scripts/test-admin-moderation.js
+        working-directory: ./backend
+
+      - name: Run Inngest Background Jobs Tests
+        run: node scripts/test-inngest-jobs.js
+        working-directory: ./backend
+
+  # ============================================================================
+  # 3. Docker Container Build & Image Validation
+  # ============================================================================
+  docker-build:
+    name: Build & Validate Docker Containers
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: secure-exchange-backend:ci-${{ github.sha }}
+
+      - name: Build Frontend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          tags: secure-exchange-frontend:ci-${{ github.sha }}
+          build-args: |
+            VITE_API_URL=/api/v1
+            VITE_WS_URL=/
+
+  # ============================================================================
+  # 4. Deployment Staging & Production Gates
+  # ============================================================================
+  deploy-staging:
+    name: Deploy to Staging Environment
+    needs: docker-build
+    if: github.ref == 'refs/heads/staging' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.example.com
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Staging Cluster
+        run: |
+          echo "Deploying release ${{ github.sha }} to Staging environment..."
+          # docker compose -f docker-compose.staging.yml up -d --build
+
+  deploy-production:
+    name: Deploy to Production Environment
+    needs: docker-build
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://example.com
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Production Cluster (Rolling Zero-Downtime)
+        run: |
+          echo "Deploying production release ${{ github.sha }} with zero-downtime rolling update..."
+          # docker compose -f docker-compose.prod.yml up -d --no-deps --build backend

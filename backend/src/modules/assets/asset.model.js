@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
-import { AssetTypes, AssetStatus, VerificationStatus } from '../../common/constants/asset-types.constant.js';
+import {
+  AssetTypes,
+  AssetStatus,
+  VerificationStatus,
+} from '../../common/constants/asset-types.constant.js';
 import { ExtractionStatus } from './constants/ingestion.constant.js';
 
 const assetSchema = new mongoose.Schema(

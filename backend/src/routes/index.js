@@ -33,6 +33,3 @@ apiRouter.use('/reports', reportRoutes);
 apiRouter.use('/admin', adminRoutes);
 
 export { apiRouter };
-
-
-

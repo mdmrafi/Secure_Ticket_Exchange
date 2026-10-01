@@ -8,7 +8,10 @@ import { env } from '../src/config/env.config.js';
 import { EventNames, CORE_DOMAIN_EVENTS } from '../src/common/constants/events.constant.js';
 import { eventPublisher, publishEvent } from '../src/jobs/publisher.js';
 import { idempotencyService } from '../src/jobs/idempotency/idempotency.service.js';
-import { ProcessedEvent, ProcessedEventStatus } from '../src/jobs/idempotency/processed-event.model.js';
+import {
+  ProcessedEvent,
+  ProcessedEventStatus,
+} from '../src/jobs/idempotency/processed-event.model.js';
 import { AuditLog } from '../src/modules/audit/audit-log.model.js';
 import { auditService } from '../src/modules/audit/audit.service.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
@@ -82,12 +85,16 @@ function createMockStep() {
 
 async function runTestSuite() {
   console.log('\n' + '='.repeat(70));
-  console.log(`${colors.cyan}${colors.bold}  INNGEST ASYNCHRONOUS BACKGROUND JOBS TEST SUITE${colors.reset}`);
+  console.log(
+    `${colors.cyan}${colors.bold}  INNGEST ASYNCHRONOUS BACKGROUND JOBS TEST SUITE${colors.reset}`
+  );
   console.log('='.repeat(70) + '\n');
 
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/secure_asset_exchange';
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
-  console.log(`${colors.blue}ℹ Connected to MongoDB Atlas for background jobs integration tests${colors.reset}\n`);
+  console.log(
+    `${colors.blue}ℹ Connected to MongoDB Atlas for background jobs integration tests${colors.reset}\n`
+  );
 
   // Shared test identifiers
   const testRunId = `test_${Date.now()}`;
@@ -101,7 +108,9 @@ async function runTestSuite() {
     // =========================================================================
     // SECTION 1: Event Creation & Publishing Tests
     // =========================================================================
-    console.log(`${colors.yellow}${colors.bold}1. Event Creation & Dispatching Tests${colors.reset}`);
+    console.log(
+      `${colors.yellow}${colors.bold}1. Event Creation & Dispatching Tests${colors.reset}`
+    );
 
     // Verify all 11 core domain events are defined
     assert(CORE_DOMAIN_EVENTS.length === 11, 'Core Domain Events Count', 'Expected 11 events');
@@ -146,12 +155,25 @@ async function runTestSuite() {
 
     unsubscribe();
 
-    assert(publishResult && publishResult.eventId, 'Event envelope created with unique ID', publishResult.eventId);
+    assert(
+      publishResult && publishResult.eventId,
+      'Event envelope created with unique ID',
+      publishResult.eventId
+    );
     assert(capturedEvent !== null, 'Local event observer captured published event');
-    assert(capturedEvent?.name === EventNames.USER_CREATED, 'Event envelope has correct event name');
+    assert(
+      capturedEvent?.name === EventNames.USER_CREATED,
+      'Event envelope has correct event name'
+    );
     assert(capturedEvent?.data?.userId === testUserId.toString(), 'Event data payload preserved');
-    assert(capturedEvent?.data?.eventId === publishResult.eventId, 'Event ID embedded inside data payload');
-    assert(capturedEvent?.user?.email === `test_${testRunId}@example.com`, 'User context preserved in event');
+    assert(
+      capturedEvent?.data?.eventId === publishResult.eventId,
+      'Event ID embedded inside data payload'
+    );
+    assert(
+      capturedEvent?.user?.email === `test_${testRunId}@example.com`,
+      'User context preserved in event'
+    );
 
     // =========================================================================
     // SECTION 2: Background Job Execution Tests
@@ -175,7 +197,10 @@ async function runTestSuite() {
 
     assert(auditRecord && auditRecord._id, 'Audit record persisted in database');
     assert(auditRecord.entityType === 'LISTING', 'Audit record resolved entityType correctly');
-    assert(auditRecord.entityId === testListingId.toString(), 'Audit record resolved entityId correctly');
+    assert(
+      auditRecord.entityId === testListingId.toString(),
+      'Audit record resolved entityId correctly'
+    );
     assert(auditRecord.eventId === auditEventId, 'Audit record indexed by eventId');
 
     // Test 2B: In-App Notification Job
@@ -188,7 +213,10 @@ async function runTestSuite() {
     });
 
     assert(notification && notification._id, 'Notification persisted in database');
-    assert(notification.recipientId.toString() === testUserId.toString(), 'Notification recipient matched');
+    assert(
+      notification.recipientId.toString() === testUserId.toString(),
+      'Notification recipient matched'
+    );
     assert(notification.isRead === false, 'Notification defaults to unread');
 
     // Test 2C: Email Notification Job
@@ -232,8 +260,14 @@ async function runTestSuite() {
     const reloadedListing = await Listing.findById(testListingId);
 
     assert(sweepResult.expiredCount >= 1, 'Sweeper detected expired reservations');
-    assert(reloadedReservation.status === ReservationStatus.EXPIRED, 'Stale reservation transitioned to EXPIRED');
-    assert(reloadedListing.status === ListingStatus.ACTIVE, 'Listing atomically restored back to ACTIVE');
+    assert(
+      reloadedReservation.status === ReservationStatus.EXPIRED,
+      'Stale reservation transitioned to EXPIRED'
+    );
+    assert(
+      reloadedListing.status === ListingStatus.ACTIVE,
+      'Listing atomically restored back to ACTIVE'
+    );
 
     // Test 2E: Transaction Reminder Job
     console.log(`  ${colors.cyan}Testing Transaction Reminders Job...${colors.reset}`);
@@ -253,7 +287,11 @@ async function runTestSuite() {
     // Test reminder logic: when pending, dispatches notification and updates metadata
     const reminderEventId = `evt_reminder_${testRunId}`;
     const reminderResult = await idempotencyService.executeIdempotent(
-      { eventId: reminderEventId, jobId: 'transaction-reminders-job', eventName: EventNames.TRANSACTION_CREATED },
+      {
+        eventId: reminderEventId,
+        jobId: 'transaction-reminders-job',
+        eventName: EventNames.TRANSACTION_CREATED,
+      },
       async () => {
         const tx = await Transaction.findById(testTransactionId);
         const isPending =
@@ -279,7 +317,10 @@ async function runTestSuite() {
 
     const reloadedTx = await Transaction.findById(testTransactionId);
     assert(reminderResult.result?.sent === true, 'Reminder sent for pending transaction');
-    assert(Boolean(reloadedTx.metadata?.paymentReminderSentAt), 'Transaction recorded reminder timestamp');
+    assert(
+      Boolean(reloadedTx.metadata?.paymentReminderSentAt),
+      'Transaction recorded reminder timestamp'
+    );
 
     // Test that completed transaction skips reminder
     await Transaction.findByIdAndUpdate(testTransactionId, {
@@ -319,13 +360,22 @@ async function runTestSuite() {
       }
     }
 
-    assert(attemptCounter === 3, 'Retry mechanism executed retry attempts', `Completed in ${attemptCounter} attempts`);
-    assert(retryExecutionResult?.success === true, 'Job recovered and succeeded after transient retries');
+    assert(
+      attemptCounter === 3,
+      'Retry mechanism executed retry attempts',
+      `Completed in ${attemptCounter} attempts`
+    );
+    assert(
+      retryExecutionResult?.success === true,
+      'Job recovered and succeeded after transient retries'
+    );
 
     // =========================================================================
     // SECTION 4: Duplicate Event & Idempotency Tests
     // =========================================================================
-    console.log(`\n${colors.yellow}${colors.bold}4. Duplicate Event & Idempotency Tests${colors.reset}`);
+    console.log(
+      `\n${colors.yellow}${colors.bold}4. Duplicate Event & Idempotency Tests${colors.reset}`
+    );
 
     const dedupeEventId = `evt_dedupe_test_${testRunId}`;
     const dedupeJobId = 'test-idempotent-notification-job';
@@ -354,12 +404,21 @@ async function runTestSuite() {
     const secondRun = await runIdempotentAction();
     assert(secondRun.duplicate === true, 'Second execution recognized as duplicate');
     assert(secondRun.skipped === true, 'Second execution skipped successfully');
-    assert(sideEffectExecutionCount === 1, 'Side effect was NOT repeated on duplicate delivery (Idempotent!)');
+    assert(
+      sideEffectExecutionCount === 1,
+      'Side effect was NOT repeated on duplicate delivery (Idempotent!)'
+    );
 
     // Verify ProcessedEvent ledger record in database
-    const ledgerRecord = await ProcessedEvent.findOne({ eventId: dedupeEventId, jobId: dedupeJobId });
+    const ledgerRecord = await ProcessedEvent.findOne({
+      eventId: dedupeEventId,
+      jobId: dedupeJobId,
+    });
     assert(ledgerRecord !== null, 'Idempotency ledger record persisted');
-    assert(ledgerRecord.status === ProcessedEventStatus.COMPLETED, 'Ledger record marked COMPLETED');
+    assert(
+      ledgerRecord.status === ProcessedEventStatus.COMPLETED,
+      'Ledger record marked COMPLETED'
+    );
 
     // =========================================================================
     // SECTION 5: Failed Job Handling Tests
@@ -386,19 +445,31 @@ async function runTestSuite() {
     } catch (jobError) {
       // Inngest onFailure handler simulation
       onFailureHookExecuted = true;
-      const failedLedger = await ProcessedEvent.findOne({ eventId: failureEventId, jobId: failureJobId });
+      const failedLedger = await ProcessedEvent.findOne({
+        eventId: failureEventId,
+        jobId: failureJobId,
+      });
       if (failedLedger && failedLedger.status === ProcessedEventStatus.FAILED) {
         failureRecordedInDB = true;
       }
     }
 
     assert(onFailureHookExecuted, 'Job failure was intercepted by error handler');
-    assert(failureRecordedInDB, 'Database idempotency ledger recorded status FAILED with error diagnostic');
+    assert(
+      failureRecordedInDB,
+      'Database idempotency ledger recorded status FAILED with error diagnostic'
+    );
 
     // Verify Inngest functions serving integrity
-    console.log(`\n${colors.yellow}${colors.bold}6. Inngest Serve & Functions Registry Tests${colors.reset}`);
+    console.log(
+      `\n${colors.yellow}${colors.bold}6. Inngest Serve & Functions Registry Tests${colors.reset}`
+    );
     assert(Array.isArray(allInngestFunctions), 'allInngestFunctions is an array');
-    assert(allInngestFunctions.length >= 6, 'Contains all registered background job categories', `Total functions: ${allInngestFunctions.length}`);
+    assert(
+      allInngestFunctions.length >= 6,
+      'Contains all registered background job categories',
+      `Total functions: ${allInngestFunctions.length}`
+    );
 
     // Clean up test documents created during this run
     await AuditLog.deleteMany({ eventId: { $in: [auditEventId] } });

@@ -3,11 +3,7 @@ import { Transaction } from '../transactions/transaction.model.js';
 import { Listing } from '../listings/listing.model.js';
 import { User } from '../users/user.model.js';
 import { MessageContextType, MessageDeliveryStatus } from './chat-message.model.js';
-import {
-  NotFoundError,
-  ForbiddenError,
-  BadRequestError,
-} from '../../common/errors/index.js';
+import { NotFoundError, ForbiddenError, BadRequestError } from '../../common/errors/index.js';
 
 export class MessageService {
   constructor(repo = messageRepository) {

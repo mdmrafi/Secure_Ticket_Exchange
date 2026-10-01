@@ -34,9 +34,7 @@ export const SocketProvider = ({ children }) => {
   }, [user]);
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected }}>
-      {children}
-    </SocketContext.Provider>
+    <SocketContext.Provider value={{ socket, isConnected }}>{children}</SocketContext.Provider>
   );
 };
 

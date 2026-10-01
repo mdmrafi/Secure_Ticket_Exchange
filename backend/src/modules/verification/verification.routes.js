@@ -13,7 +13,11 @@ router.use(authenticate);
  * @desc    Initiate asset verification request
  * @access  Private
  */
-router.post('/request', validate(requestVerificationSchema), verificationController.requestVerification);
+router.post(
+  '/request',
+  validate(requestVerificationSchema),
+  verificationController.requestVerification
+);
 
 /**
  * @route   POST /api/v1/verification/railway/:assetId

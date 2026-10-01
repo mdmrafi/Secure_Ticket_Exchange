@@ -17,7 +17,9 @@ export const authenticate = async (req, res, next) => {
     }
 
     if (!token) {
-      throw new UnauthorizedError('Authentication token is missing. Please provide a valid Bearer token.');
+      throw new UnauthorizedError(
+        'Authentication token is missing. Please provide a valid Bearer token.'
+      );
     }
 
     const provider = getAuthProvider();
@@ -42,7 +44,7 @@ export const authorize = (...allowedRoles) => {
     }
 
     const userRole = req.user.role;
-    const userRoles = Array.isArray(req.user.roles) ? req.user.roles : (userRole ? [userRole] : []);
+    const userRoles = Array.isArray(req.user.roles) ? req.user.roles : userRole ? [userRole] : [];
     const hasRole = allowedRoles.some((role) => userRoles.includes(role));
 
     if (!hasRole) {

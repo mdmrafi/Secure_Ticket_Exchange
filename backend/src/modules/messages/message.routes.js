@@ -2,11 +2,7 @@ import { Router } from 'express';
 import { messageController } from './message.controller.js';
 import { authenticate } from '../auth/auth.middleware.js';
 import { validate } from '../../common/middlewares/validate.middleware.js';
-import {
-  sendMessageSchema,
-  getHistorySchema,
-  messageIdParamSchema,
-} from './message.validation.js';
+import { sendMessageSchema, getHistorySchema, messageIdParamSchema } from './message.validation.js';
 
 const router = Router();
 

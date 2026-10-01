@@ -2,7 +2,11 @@ import { verificationRepository } from './verification.repository.js';
 import { assetRepository } from '../assets/asset.repository.js';
 import { inngest } from '../../config/inngest.config.js';
 import { NotFoundError, ForbiddenError } from '../../common/errors/index.js';
-import { AssetStatus, VerificationStatus, AssetTypes } from '../../common/constants/asset-types.constant.js';
+import {
+  AssetStatus,
+  VerificationStatus,
+  AssetTypes,
+} from '../../common/constants/asset-types.constant.js';
 import { getAssetVerifier } from './verifiers/asset-verifier.factory.js';
 import { verificationEngine } from './engine/verification-engine.js';
 import { logger } from '../../config/logger.config.js';
@@ -10,7 +14,11 @@ import { publishEvent } from '../../jobs/publisher.js';
 import { EventNames } from '../../common/constants/events.constant.js';
 
 export class VerificationService {
-  constructor(repo = verificationRepository, assetRepo = assetRepository, engine = verificationEngine) {
+  constructor(
+    repo = verificationRepository,
+    assetRepo = assetRepository,
+    engine = verificationEngine
+  ) {
     this.repo = repo;
     this.assetRepo = assetRepo;
     this.engine = engine;
@@ -76,11 +84,16 @@ export class VerificationService {
       const isAdmin = requestingUser.role === 'ADMIN';
 
       if (!isOwner && !isAdmin) {
-        throw new ForbiddenError('Forbidden: You can only request verification for your own assets');
+        throw new ForbiddenError(
+          'Forbidden: You can only request verification for your own assets'
+        );
       }
     }
 
-    logger.info({ assetId, userId: requestingUser?.userId }, 'Running multi-layer railway ticket verification');
+    logger.info(
+      { assetId, userId: requestingUser?.userId },
+      'Running multi-layer railway ticket verification'
+    );
 
     // Run verification engine across all 6 layers
     const result = await this.engine.verifyRailwayTicket(asset, options);
@@ -93,7 +106,10 @@ export class VerificationService {
     if (result.status === VerificationStatus.VERIFIED) {
       updatePayload.status = AssetStatus.VERIFIED;
       updatePayload.verifiedAt = new Date();
-    } else if (result.status === VerificationStatus.FAILED || result.status === VerificationStatus.SUSPICIOUS) {
+    } else if (
+      result.status === VerificationStatus.FAILED ||
+      result.status === VerificationStatus.SUSPICIOUS
+    ) {
       updatePayload.status = AssetStatus.REJECTED;
     } else if (result.status === VerificationStatus.MANUAL_REVIEW) {
       updatePayload.status = AssetStatus.PENDING_VERIFICATION;
@@ -109,7 +125,7 @@ export class VerificationService {
       confidenceScore: result.overallConfidenceScore,
       checks: result.checks.map((c) => ({
         checkType: c.layer,
-        status: c.status === 'PASSED' ? 'PASSED' : (c.status === 'FAILED' ? 'FAILED' : 'PENDING'),
+        status: c.status === 'PASSED' ? 'PASSED' : c.status === 'FAILED' ? 'FAILED' : 'PENDING',
         score: c.score || 0,
         details: { ...c.details, reason: c.reason },
         performedAt: new Date(),

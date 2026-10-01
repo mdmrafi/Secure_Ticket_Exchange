@@ -2,15 +2,8 @@ import { fraudRepository } from './fraud.repository.js';
 import { fraudDetectionEngine } from './engine/fraud-detection.engine.js';
 import { Asset } from '../assets/asset.model.js';
 import { User } from '../users/user.model.js';
-import {
-  RiskLevel,
-  AssessmentStatus,
-  ReviewDecisionType,
-} from './constants/fraud.constant.js';
-import {
-  VerificationStatus,
-  AssetStatus,
-} from '../../common/constants/asset-types.constant.js';
+import { RiskLevel, AssessmentStatus, ReviewDecisionType } from './constants/fraud.constant.js';
+import { VerificationStatus, AssetStatus } from '../../common/constants/asset-types.constant.js';
 import { NotFoundError, BadRequestError } from '../../common/errors/index.js';
 import { publishEvent } from '../../jobs/publisher.js';
 import { EventNames } from '../../common/constants/events.constant.js';
@@ -128,7 +121,10 @@ export class FraudService {
       individualSignals: evaluation.individualSignals,
       summaryExplanation: evaluation.summaryExplanation,
       recommendedAction: evaluation.recommendedAction,
-      status: evaluation.riskLevel === RiskLevel.LOW ? AssessmentStatus.AUTO_APPROVED : AssessmentStatus.PENDING_REVIEW,
+      status:
+        evaluation.riskLevel === RiskLevel.LOW
+          ? AssessmentStatus.AUTO_APPROVED
+          : AssessmentStatus.PENDING_REVIEW,
       modelVersion: evaluation.modelVersion,
       provider: evaluation.provider,
       timestamp: evaluation.timestamp,

@@ -3,6 +3,7 @@
 A production-oriented secure digital asset exchange platform architected to eliminate fraud, counterfeit documents, and black-market scalping.
 
 The initial use-case is **safeguarding secondary railway ticket transfers** (preventing fake PDF alterations, double-listing of PNRs, and above-cap scalping), with a domain and database architecture engineered from day one to support:
+
 - **Intercity Bus Tickets**
 - **Live Event & Concert Passes**
 - **Transferable Legal Documents & Digital Rights**
@@ -155,6 +156,7 @@ Secure_Ticket_Exchange/
 ## 🚀 Exact Commands to Run
 
 ### Prerequisites
+
 - Node.js `v18+` (Tested on `v24.15.0`)
 - npm `v9+` (Tested on `v12.0.1`)
 - MongoDB (Local service, Docker container, or MongoDB Atlas connection URI)
@@ -173,8 +175,8 @@ npm run dev
 npm start
 ```
 
-*The backend runs at `http://localhost:5000`.*
-*The API is mounted at `http://localhost:5000/api/v1`.*
+_The backend runs at `http://localhost:5000`._
+_The API is mounted at `http://localhost:5000/api/v1`._
 
 ---
 
@@ -189,7 +191,7 @@ cd frontend
 npm run dev
 ```
 
-*The frontend opens at `http://localhost:5173`.*
+_The frontend opens at `http://localhost:5173`._
 
 ---
 
@@ -198,16 +200,19 @@ npm run dev
 The health check endpoint inspects server uptime, memory usage, API version, and live MongoDB connection state.
 
 ### Run in PowerShell:
+
 ```powershell
 Invoke-RestMethod -Uri http://localhost:5000/api/v1/health -Method GET
 ```
 
 ### Or using curl:
+
 ```bash
 curl -s http://localhost:5000/api/v1/health
 ```
 
 ### Expected JSON Response (when database is online):
+
 ```json
 {
   "success": true,
@@ -237,7 +242,7 @@ curl -s http://localhost:5000/api/v1/health
 }
 ```
 
-*(Note: If MongoDB is offline, the API remains responsive and returns `statusCode: 503` with `"status": "degraded"` so health monitors can detect DB issues without crashing the HTTP server.)*
+_(Note: If MongoDB is offline, the API remains responsive and returns `statusCode: 503` with `"status": "degraded"` so health monitors can detect DB issues without crashing the HTTP server.)_
 
 ---
 
@@ -246,12 +251,14 @@ curl -s http://localhost:5000/api/v1/health
 A standalone CLI diagnostic tool is provided to test database connectivity independently of the web server.
 
 ### Run the test script:
+
 ```bash
 cd backend
 npm run test:db
 ```
 
 ### If MongoDB is running:
+
 ```
 ============================================================
   MONGODB CONNECTION TEST UTILITY
@@ -270,7 +277,71 @@ Database connection layer is functioning as expected.
 ```
 
 ### If MongoDB is not yet running:
+
 The script outputs troubleshooting steps for starting local MongoDB (`net start MongoDB` or Docker) or pointing to MongoDB Atlas by editing `MONGODB_URI` in `backend/.env`.
+
+---
+
+## 🐳 Production Deployment & Docker Setup
+
+The platform is fully containerized and production-ready with separate orchestration profiles, Nginx reverse proxy, automated health/readiness checks, structured JSON logging, and Prometheus monitoring.
+
+For complete architectural diagrams, operational runbooks, and zero-downtime rolling update instructions, see **[DEPLOYMENT.md](file:///d:/Projects/Secure_Ticket_Exchange/DEPLOYMENT.md)**.
+
+### Environment Matrix & Secret Isolation
+
+Three environments are strictly maintained with zero-secrets committed to Git:
+
+- **`development`**: Local development (`.env.development.example`)
+- **`staging`**: Staging cluster with memory/CPU limits (`.env.staging.example` -> `.env.staging`)
+- **`production`**: Production cluster with HSTS, strict CORS, and hardened pooling (`.env.production.example` -> `.env.production`)
+
+```bash
+# Setup environment from template
+cp .env.production.example .env.production
+cp frontend/.env.production.example frontend/.env.production
+```
+
+### Running with Docker Compose
+
+```bash
+# Development (Local Containers)
+docker compose up -d --build
+
+# Staging Environment
+docker compose -f docker-compose.staging.yml up -d --build
+
+# Production Cluster (High Availability & TLS Reverse Proxy)
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+### Health, Readiness & Monitoring Endpoints
+
+| Probe                    | Endpoint                     | Target Audience                         |
+| :----------------------- | :--------------------------- | :-------------------------------------- |
+| **Comprehensive Health** | `GET /api/v1/health`         | Diagnostic Dashboards & Ops Teams       |
+| **Liveness Probe**       | `GET /api/v1/health/live`    | Docker / Kubernetes restart controller  |
+| **Readiness Probe**      | `GET /api/v1/health/ready`   | Ingress / Load Balancer traffic routing |
+| **Prometheus Metrics**   | `GET /api/v1/health/metrics` | Prometheus / Grafana scrapers           |
+
+### Quality & Testing Commands
+
+```bash
+# Run all automated test suites
+npm run test:all
+
+# Run individual security & domain suites
+npm run test:security      # 38 penetration attack simulations
+npm run test:payment       # 58 zero-trust payment verification tests
+npm run test:admin         # 75 administrative moderation & RBAC tests
+npm run test:jobs          # 47 Inngest idempotent background jobs tests
+
+# Code quality & vulnerability audit
+npm run lint               # Oxlint across backend & frontend
+npm run format:check       # Prettier code style verification
+npm run audit              # Zero-vulnerability dependency audit
+npm run build              # Backend syntax check & frontend SPA bundle
+```
 
 ---
 

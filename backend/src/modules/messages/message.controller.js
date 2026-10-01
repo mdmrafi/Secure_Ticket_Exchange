@@ -15,15 +15,10 @@ export class MessageController {
   getHistory = asyncHandler(async (req, res) => {
     const { roomId, page = '1', limit = '50' } = req.query;
 
-    const result = await this.service.getMessageHistory(
-      roomId,
-      req.user.userId,
-      req.user.role,
-      {
-        page: parseInt(page, 10),
-        limit: parseInt(limit, 10),
-      }
-    );
+    const result = await this.service.getMessageHistory(roomId, req.user.userId, req.user.role, {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+    });
 
     return ApiResponse.success(res, result, 'Message history retrieved');
   });

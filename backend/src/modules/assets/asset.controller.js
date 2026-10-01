@@ -66,11 +66,7 @@ export class AssetController {
 
     const asset = await this.service.ingestRailwayTicket(req.user.userId, file, options);
 
-    return ApiResponse.created(
-      res,
-      asset,
-      'Railway ticket ingested and processed successfully'
-    );
+    return ApiResponse.created(res, asset, 'Railway ticket ingested and processed successfully');
   });
 
   /**

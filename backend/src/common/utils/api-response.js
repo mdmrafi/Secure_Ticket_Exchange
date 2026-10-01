@@ -30,7 +30,12 @@ export class ApiResponse {
   /**
    * Format an error response
    */
-  static error(res, message = 'Internal Server Error', statusCode = HttpStatus.INTERNAL_SERVER_ERROR, errors = null) {
+  static error(
+    res,
+    message = 'Internal Server Error',
+    statusCode = HttpStatus.INTERNAL_SERVER_ERROR,
+    errors = null
+  ) {
     const payload = {
       success: false,
       statusCode,

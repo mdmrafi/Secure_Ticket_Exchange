@@ -46,7 +46,10 @@ export const kycCompletedEmailJob = inngest.createFunction(
     retries: 3,
     idempotency: 'event.id',
     onFailure: async ({ error, event }) => {
-      logger.error({ error: error.message, eventId: event.id }, 'Failed to send KYC approval email');
+      logger.error(
+        { error: error.message, eventId: event.id },
+        'Failed to send KYC approval email'
+      );
     },
   },
   { event: EventNames.KYC_COMPLETED },
@@ -79,7 +82,10 @@ export const transactionCreatedEmailJob = inngest.createFunction(
     retries: 3,
     idempotency: 'event.id',
     onFailure: async ({ error, event }) => {
-      logger.error({ error: error.message, eventId: event.id }, 'Failed to send transaction initiated email');
+      logger.error(
+        { error: error.message, eventId: event.id },
+        'Failed to send transaction initiated email'
+      );
     },
   },
   { event: EventNames.TRANSACTION_CREATED },
@@ -112,7 +118,10 @@ export const paymentCompletedEmailJob = inngest.createFunction(
     retries: 3,
     idempotency: 'event.id',
     onFailure: async ({ error, event }) => {
-      logger.error({ error: error.message, eventId: event.id }, 'Failed to send payment receipt email');
+      logger.error(
+        { error: error.message, eventId: event.id },
+        'Failed to send payment receipt email'
+      );
     },
   },
   { event: EventNames.PAYMENT_COMPLETED },
@@ -146,7 +155,10 @@ export const transferCompletedEmailJob = inngest.createFunction(
     retries: 3,
     idempotency: 'event.id',
     onFailure: async ({ error, event }) => {
-      logger.error({ error: error.message, eventId: event.id }, 'Failed to send transfer delivery email');
+      logger.error(
+        { error: error.message, eventId: event.id },
+        'Failed to send transfer delivery email'
+      );
     },
   },
   { event: EventNames.TRANSFER_COMPLETED },
@@ -194,7 +206,9 @@ export const fraudAlertEmailJob = inngest.createFunction(
             email: event.data.userEmail || event.user?.email,
             targetId: event.data.targetId,
             riskLevel: event.data.riskLevel,
-            explanation: event.data.summaryExplanation || 'Suspicious signals detected during automated risk evaluation.',
+            explanation:
+              event.data.summaryExplanation ||
+              'Suspicious signals detected during automated risk evaluation.',
           });
         }
       );

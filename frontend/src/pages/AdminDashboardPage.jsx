@@ -31,10 +31,30 @@ export const AdminDashboardPage = () => {
 
   const statCards = [
     { label: 'Registered Users', value: metrics.totalUsers, icon: Users, color: 'text-blue-400' },
-    { label: 'Registered Assets', value: metrics.totalAssets, icon: Ticket, color: 'text-indigo-400' },
-    { label: 'Active Listings', value: metrics.activeListings, icon: ShieldCheck, color: 'text-emerald-400' },
-    { label: 'Escrow Transactions', value: metrics.totalTransactions, icon: ArrowLeftRight, color: 'text-purple-400' },
-    { label: 'Pending Fraud Reports', value: metrics.pendingReports, icon: AlertTriangle, color: 'text-amber-400' },
+    {
+      label: 'Registered Assets',
+      value: metrics.totalAssets,
+      icon: Ticket,
+      color: 'text-indigo-400',
+    },
+    {
+      label: 'Active Listings',
+      value: metrics.activeListings,
+      icon: ShieldCheck,
+      color: 'text-emerald-400',
+    },
+    {
+      label: 'Escrow Transactions',
+      value: metrics.totalTransactions,
+      icon: ArrowLeftRight,
+      color: 'text-purple-400',
+    },
+    {
+      label: 'Pending Fraud Reports',
+      value: metrics.pendingReports,
+      icon: AlertTriangle,
+      color: 'text-amber-400',
+    },
   ];
 
   return (
@@ -103,7 +123,9 @@ export const AdminDashboardPage = () => {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <button
-                    onClick={() => alert('Review report action triggered. Admin resolution endpoint active.')}
+                    onClick={() =>
+                      alert('Review report action triggered. Admin resolution endpoint active.')
+                    }
                     className="px-2.5 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 cursor-pointer"
                   >
                     Investigate

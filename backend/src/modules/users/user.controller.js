@@ -19,7 +19,13 @@ export class UserController {
 
   listUsers = asyncHandler(async (req, res) => {
     const result = await this.service.listUsers(req.query);
-    return ApiResponse.success(res, result.users, 'Users retrieved successfully', 200, result.pagination);
+    return ApiResponse.success(
+      res,
+      result.users,
+      'Users retrieved successfully',
+      200,
+      result.pagination
+    );
   });
 }
 

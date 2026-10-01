@@ -162,7 +162,9 @@ export class AuthService {
     // Reuse detection: if a revoked token is presented, compromise is suspected
     if (storedToken.isRevoked) {
       await this.authRepo.revokeAllUserTokens(storedToken.userId?._id || storedToken.userId);
-      throw new UnauthorizedError('Revoked token reuse detected. All sessions invalidated for security.');
+      throw new UnauthorizedError(
+        'Revoked token reuse detected. All sessions invalidated for security.'
+      );
     }
 
     // Check expiration

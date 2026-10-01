@@ -30,7 +30,8 @@ export const kycNotificationJob = inngest.createFunction(
         async () => {
           return notificationService.sendNotification(userId, {
             title: 'Identity Verification Approved',
-            message: 'Your identity documents have been verified. You can now list high-trust assets.',
+            message:
+              'Your identity documents have been verified. You can now list high-trust assets.',
             type: 'SYSTEM',
             data: { kycId: event.data.kycId, verificationLevel: event.data.verificationLevel },
           });
@@ -50,7 +51,10 @@ export const assetVerifiedNotificationJob = inngest.createFunction(
     retries: 3,
     idempotency: 'event.id',
     onFailure: async ({ error, event }) => {
-      logger.error({ error: error.message, eventId: event.id }, 'Asset verified notification failed');
+      logger.error(
+        { error: error.message, eventId: event.id },
+        'Asset verified notification failed'
+      );
     },
   },
   { event: EventNames.ASSET_VERIFIED },
@@ -89,7 +93,10 @@ export const listingReservedNotificationJob = inngest.createFunction(
     retries: 3,
     idempotency: 'event.id',
     onFailure: async ({ error, event }) => {
-      logger.error({ error: error.message, eventId: event.id }, 'Listing reserved notification failed');
+      logger.error(
+        { error: error.message, eventId: event.id },
+        'Listing reserved notification failed'
+      );
     },
   },
   { event: EventNames.LISTING_RESERVED },
@@ -142,7 +149,10 @@ export const transactionCreatedNotificationJob = inngest.createFunction(
     retries: 3,
     idempotency: 'event.id',
     onFailure: async ({ error, event }) => {
-      logger.error({ error: error.message, eventId: event.id }, 'Transaction created notification failed');
+      logger.error(
+        { error: error.message, eventId: event.id },
+        'Transaction created notification failed'
+      );
     },
   },
   { event: EventNames.TRANSACTION_CREATED },
@@ -193,7 +203,10 @@ export const paymentCompletedNotificationJob = inngest.createFunction(
     retries: 3,
     idempotency: 'event.id',
     onFailure: async ({ error, event }) => {
-      logger.error({ error: error.message, eventId: event.id }, 'Payment completed notification failed');
+      logger.error(
+        { error: error.message, eventId: event.id },
+        'Payment completed notification failed'
+      );
     },
   },
   { event: EventNames.PAYMENT_COMPLETED },
@@ -244,7 +257,10 @@ export const transferCompletedNotificationJob = inngest.createFunction(
     retries: 3,
     idempotency: 'event.id',
     onFailure: async ({ error, event }) => {
-      logger.error({ error: error.message, eventId: event.id }, 'Transfer completed notification failed');
+      logger.error(
+        { error: error.message, eventId: event.id },
+        'Transfer completed notification failed'
+      );
     },
   },
   { event: EventNames.TRANSFER_COMPLETED },
@@ -334,7 +350,10 @@ export const reportCreatedNotificationJob = inngest.createFunction(
     retries: 3,
     idempotency: 'event.id',
     onFailure: async ({ error, event }) => {
-      logger.error({ error: error.message, eventId: event.id }, 'Report created notification failed');
+      logger.error(
+        { error: error.message, eventId: event.id },
+        'Report created notification failed'
+      );
     },
   },
   { event: EventNames.REPORT_CREATED },

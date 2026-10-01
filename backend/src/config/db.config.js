@@ -11,14 +11,17 @@ export const connectDatabase = async () => {
   }
 
   const options = {
+    minPoolSize: env.MONGODB_MIN_POOL_SIZE,
     maxPoolSize: env.MONGODB_MAX_POOL_SIZE,
     serverSelectionTimeoutMS: env.MONGODB_SERVER_SELECTION_TIMEOUT_MS,
     autoIndex: env.NODE_ENV !== 'production',
   };
 
   try {
-    logger.info(`Connecting to MongoDB at ${env.MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}...`);
-    
+    logger.info(
+      `Connecting to MongoDB at ${env.MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}...`
+    );
+
     mongoose.connection.on('connected', () => {
       isConnected = true;
       logger.info('MongoDB connected successfully');

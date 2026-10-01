@@ -25,10 +25,7 @@ import { EventNames } from '../../common/constants/events.constant.js';
 
 // Strict State Transition Matrix for Transactions
 export const ALLOWED_TRANSACTION_TRANSITIONS = {
-  [TransactionStatus.INITIATED]: [
-    TransactionStatus.PAYMENT_PENDING,
-    TransactionStatus.CANCELLED,
-  ],
+  [TransactionStatus.INITIATED]: [TransactionStatus.PAYMENT_PENDING, TransactionStatus.CANCELLED],
   [TransactionStatus.PAYMENT_PENDING]: [
     TransactionStatus.PAYMENT_CONFIRMED,
     TransactionStatus.CANCELLED,
@@ -39,32 +36,17 @@ export const ALLOWED_TRANSACTION_TRANSITIONS = {
     TransactionStatus.DISPUTED,
     TransactionStatus.CANCELLED,
   ],
-  [TransactionStatus.TRANSFER_PENDING]: [
-    TransactionStatus.COMPLETED,
-    TransactionStatus.DISPUTED,
-  ],
+  [TransactionStatus.TRANSFER_PENDING]: [TransactionStatus.COMPLETED, TransactionStatus.DISPUTED],
   [TransactionStatus.COMPLETED]: [], // Terminal state
   [TransactionStatus.CANCELLED]: [], // Terminal state
-  [TransactionStatus.DISPUTED]: [
-    TransactionStatus.COMPLETED,
-    TransactionStatus.CANCELLED,
-  ],
+  [TransactionStatus.DISPUTED]: [TransactionStatus.COMPLETED, TransactionStatus.CANCELLED],
 };
 
 // Strict State Transition Matrix for Payments
 export const ALLOWED_PAYMENT_TRANSITIONS = {
-  [PaymentStatus.PENDING]: [
-    PaymentStatus.AUTHORIZED,
-    PaymentStatus.PAID,
-    PaymentStatus.FAILED,
-  ],
-  [PaymentStatus.AUTHORIZED]: [
-    PaymentStatus.PAID,
-    PaymentStatus.FAILED,
-  ],
-  [PaymentStatus.PAID]: [
-    PaymentStatus.REFUNDED,
-  ],
+  [PaymentStatus.PENDING]: [PaymentStatus.AUTHORIZED, PaymentStatus.PAID, PaymentStatus.FAILED],
+  [PaymentStatus.AUTHORIZED]: [PaymentStatus.PAID, PaymentStatus.FAILED],
+  [PaymentStatus.PAID]: [PaymentStatus.REFUNDED],
   [PaymentStatus.FAILED]: [
     PaymentStatus.PENDING, // allow retry
   ],
@@ -80,7 +62,8 @@ export function sanitizePaymentData(data) {
   if (data instanceof Date || data instanceof RegExp) return data;
   if (Array.isArray(data)) return data.map(sanitizePaymentData);
 
-  const sensitivePattern = /^(card_?number|pan|cvv|cvc|security_?code|expiry|expiry_?date|pin|password|secret|access_?token)$/i;
+  const sensitivePattern =
+    /^(card_?number|pan|cvv|cvc|security_?code|expiry|expiry_?date|pin|password|secret|access_?token)$/i;
   const sanitized = {};
 
   for (const [key, value] of Object.entries(data)) {
@@ -174,7 +157,9 @@ export class TransactionService {
 
     // Check if listing is active or reserved by this buyer
     if (listing.status !== ListingStatus.ACTIVE && listing.status !== ListingStatus.RESERVED) {
-      throw new BadRequestError(`Listing is no longer active or available (Status: ${listing.status})`);
+      throw new BadRequestError(
+        `Listing is no longer active or available (Status: ${listing.status})`
+      );
     }
 
     if (listing.status === ListingStatus.RESERVED) {
@@ -381,11 +366,17 @@ export class TransactionService {
           providerTransactionId: verification.transactionId,
         },
       });
-      throw new BadRequestError('Transaction ID mismatch: payment session belongs to another transaction');
+      throw new BadRequestError(
+        'Transaction ID mismatch: payment session belongs to another transaction'
+      );
     }
 
     // Check 2: Amount Manipulation Protection
-    if (verification.amount !== undefined && verification.amount !== null && verification.amount > 0) {
+    if (
+      verification.amount !== undefined &&
+      verification.amount !== null &&
+      verification.amount > 0
+    ) {
       if (Math.abs(Number(verification.amount) - Number(tx.amount)) > 0.001) {
         await this.repo.recordEvent({
           transactionId: tx._id,
@@ -649,14 +640,14 @@ export class TransactionService {
           callbackPayload: sanitizedPayload,
         },
       });
-      throw new BadRequestError('Replay attack detected: cannot process payment callback for a cancelled transaction');
+      throw new BadRequestError(
+        'Replay attack detected: cannot process payment callback for a cancelled transaction'
+      );
     }
 
     // 2b. REPLAY ATTACK DEFENSE - Webhook timestamp expiration (max 5 minutes window)
     const rawTimestamp =
-      headers['x-webhook-timestamp'] ||
-      headers['x-timestamp'] ||
-      callbackPayload.timestamp;
+      headers['x-webhook-timestamp'] || headers['x-timestamp'] || callbackPayload.timestamp;
 
     if (rawTimestamp) {
       const ts = Number(rawTimestamp);
@@ -680,15 +671,15 @@ export class TransactionService {
             ageMs: now - ts,
           },
         });
-        throw new BadRequestError('Payment callback timestamp expired or invalid (possible replay attack)');
+        throw new BadRequestError(
+          'Payment callback timestamp expired or invalid (possible replay attack)'
+        );
       }
     }
 
     // 3. FORGED CALLBACK DEFENSE (Cryptographic HMAC Signature Verification)
     const signature =
-      headers['x-signature'] ||
-      headers['x-webhook-signature'] ||
-      callbackPayload.signature;
+      headers['x-signature'] || headers['x-webhook-signature'] || callbackPayload.signature;
 
     if (signature && typeof this.paymentProvider.verifySignature === 'function') {
       const payloadToVerify = { ...callbackPayload };
@@ -731,7 +722,9 @@ export class TransactionService {
           payloadTransactionId: callbackPayload.transactionId,
         },
       });
-      throw new BadRequestError('Transaction ID mismatch: webhook payload does not match target transaction');
+      throw new BadRequestError(
+        'Transaction ID mismatch: webhook payload does not match target transaction'
+      );
     }
 
     if (
@@ -752,7 +745,9 @@ export class TransactionService {
           payloadPaymentSessionId: callbackPayload.paymentSessionId,
         },
       });
-      throw new BadRequestError('Payment session ID mismatch: webhook payload does not match transaction session');
+      throw new BadRequestError(
+        'Payment session ID mismatch: webhook payload does not match transaction session'
+      );
     }
 
     // 5. AMOUNT MANIPULATION DEFENSE
@@ -807,7 +802,10 @@ export class TransactionService {
 
     // If simulation provider is present and session exists, ensure provider session matches webhook status
     if (typeof this.paymentProvider.simulateCustomerPayment === 'function') {
-      const sessionId = callbackPayload.paymentSessionId || tx.paymentDetails?.paymentSessionId || `mock_sess_${tx._id}`;
+      const sessionId =
+        callbackPayload.paymentSessionId ||
+        tx.paymentDetails?.paymentSessionId ||
+        `mock_sess_${tx._id}`;
       await this.paymentProvider.simulateCustomerPayment({
         paymentSessionId: sessionId,
         outcome: isSuccess ? 'SUCCESS' : 'FAIL',
@@ -876,7 +874,10 @@ export class TransactionService {
       );
     }
 
-    if (tx.transactionStatus !== TransactionStatus.PAYMENT_CONFIRMED && tx.transactionStatus !== TransactionStatus.TRANSFER_PENDING) {
+    if (
+      tx.transactionStatus !== TransactionStatus.PAYMENT_CONFIRMED &&
+      tx.transactionStatus !== TransactionStatus.TRANSFER_PENDING
+    ) {
       throw new BadRequestError(
         `Cannot execute asset transfer for transaction in status ${tx.transactionStatus}. Must be PAYMENT_CONFIRMED.`
       );
@@ -907,7 +908,10 @@ export class TransactionService {
     }
 
     // Step 2: Atomic transfer of asset ownership & finalize transaction status
-    this.validateTransactionTransition(TransactionStatus.TRANSFER_PENDING, TransactionStatus.COMPLETED);
+    this.validateTransactionTransition(
+      TransactionStatus.TRANSFER_PENDING,
+      TransactionStatus.COMPLETED
+    );
 
     // Transfer asset ownership to buyer
     await this.assetRepo.updateById(tx.assetId._id, {
@@ -1013,7 +1017,8 @@ export class TransactionService {
       fromPaymentStatus: previousPayStatus,
       toPaymentStatus: newPaymentStatus,
       actorId: userId,
-      actorRole: userRole === 'ADMIN' ? 'ADMIN' : (tx.buyerId._id.toString() === userId ? 'BUYER' : 'SELLER'),
+      actorRole:
+        userRole === 'ADMIN' ? 'ADMIN' : tx.buyerId._id.toString() === userId ? 'BUYER' : 'SELLER',
       metadata: {
         reason: reason || 'Cancelled by participant',
         cancelledAt: cancelledTx.cancelledAt,

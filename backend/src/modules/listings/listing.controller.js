@@ -62,11 +62,7 @@ export class ListingController {
    * DELETE /api/v1/listings/:id
    */
   delete = asyncHandler(async (req, res) => {
-    const listing = await this.service.deleteListing(
-      req.params.id,
-      req.user.userId,
-      req.user.role
-    );
+    const listing = await this.service.deleteListing(req.params.id, req.user.userId, req.user.role);
     return ApiResponse.success(res, listing, 'Listing cancelled successfully');
   });
 

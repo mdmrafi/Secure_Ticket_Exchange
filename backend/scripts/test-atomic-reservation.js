@@ -77,13 +77,17 @@ function assert(condition, testName, details = '') {
 }
 
 async function runTests() {
-  console.log(`\n${colors.bold}${colors.cyan}======================================================`);
+  console.log(
+    `\n${colors.bold}${colors.cyan}======================================================`
+  );
   console.log(`     ATOMIC LISTING RESERVATION & CONCURRENCY TEST`);
   console.log(`======================================================${colors.reset}\n`);
   console.log(`Target API URL: ${BASE_URL}\n`);
 
   await mongoose.connect(env.MONGODB_URI);
-  console.log(`${colors.blue}Connected to MongoDB Atlas replica set for ACID transaction testing.${colors.reset}\n`);
+  console.log(
+    `${colors.blue}Connected to MongoDB Atlas replica set for ACID transaction testing.${colors.reset}\n`
+  );
 
   await Reservation.syncIndexes();
   await Listing.syncIndexes();
@@ -213,7 +217,9 @@ async function runTests() {
     // =================================================================
     // Scenario 1: Validation Rules (Seller, Suspended, Cancelled)
     // =================================================================
-    console.log(`${colors.bold}Scenario 1: Validation Guards (Seller, Suspended, Cancelled)${colors.reset}`);
+    console.log(
+      `${colors.bold}Scenario 1: Validation Guards (Seller, Suspended, Cancelled)${colors.reset}`
+    );
 
     // Rule: Seller cannot reserve own listing
     const sellerReserveRes = await apiCall(
@@ -266,13 +272,27 @@ async function runTests() {
     // =================================================================
     // Scenario 2: High-Concurrency Simultaneous Reservation (Race Condition Test)
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 2: Simultaneous Race Condition (Buyer A vs Buyer B)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 2: Simultaneous Race Condition (Buyer A vs Buyer B)${colors.reset}`
+    );
 
     // Buyer A and Buyer B both fire concurrent reserve requests to the exact same listing
-    console.log(`  ${colors.blue}Firing concurrent POST /reserve requests simultaneously via Promise.all...${colors.reset}`);
+    console.log(
+      `  ${colors.blue}Firing concurrent POST /reserve requests simultaneously via Promise.all...${colors.reset}`
+    );
     const [raceResBuyerA, raceResBuyerB] = await Promise.all([
-      apiCall(`/listings/${listingActive._id}/reserve`, 'POST', { durationMinutes: 15 }, tokenBuyerA),
-      apiCall(`/listings/${listingActive._id}/reserve`, 'POST', { durationMinutes: 15 }, tokenBuyerB),
+      apiCall(
+        `/listings/${listingActive._id}/reserve`,
+        'POST',
+        { durationMinutes: 15 },
+        tokenBuyerA
+      ),
+      apiCall(
+        `/listings/${listingActive._id}/reserve`,
+        'POST',
+        { durationMinutes: 15 },
+        tokenBuyerB
+      ),
     ]);
 
     const successes = [raceResBuyerA, raceResBuyerB].filter((r) => r.status === 201);
@@ -282,10 +302,7 @@ async function runTests() {
       successes.length === 1,
       'Exactly ONE concurrent buyer succeeded in reserving (201 Created)'
     );
-    assert(
-      conflicts.length === 1,
-      'Exactly ONE concurrent buyer was blocked with 409 Conflict'
-    );
+    assert(conflicts.length === 1, 'Exactly ONE concurrent buyer was blocked with 409 Conflict');
 
     const winnerResponse = successes[0];
     const winnerData = winnerResponse.body?.data;
@@ -297,7 +314,9 @@ async function runTests() {
     const winnerBuyerId = winnerData?.reservation?.buyerId;
     const winnerName = winnerBuyerId === buyerA._id.toString() ? 'Buyer Alice' : 'Buyer Bob';
     const loserToken = winnerBuyerId === buyerA._id.toString() ? tokenBuyerB : tokenBuyerA;
-    console.log(`  ${colors.cyan}Race condition result: ${winnerName} acquired the reservation lock.${colors.reset}`);
+    console.log(
+      `  ${colors.cyan}Race condition result: ${winnerName} acquired the reservation lock.${colors.reset}`
+    );
 
     // Verify Database state: exactly 1 active reservation in MongoDB
     const activeReservationsInDb = await Reservation.find({
@@ -323,7 +342,9 @@ async function runTests() {
     // =================================================================
     // Scenario 3: Subsequent Buyer Blocked while Active
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 3: Subsequent Reservation Attempt by Buyer C${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 3: Subsequent Reservation Attempt by Buyer C${colors.reset}`
+    );
 
     const buyerCReserveRes = await apiCall(
       `/listings/${listingActive._id}/reserve`,
@@ -331,10 +352,7 @@ async function runTests() {
       {},
       tokenBuyerC
     );
-    assert(
-      buyerCReserveRes.status === 409,
-      'Third buyer is blocked with 409 Conflict'
-    );
+    assert(buyerCReserveRes.status === 409, 'Third buyer is blocked with 409 Conflict');
     assert(
       buyerCReserveRes.body?.message?.includes('already reserved'),
       'Conflict error states listing is already reserved'
@@ -364,7 +382,9 @@ async function runTests() {
     // =================================================================
     // Scenario 5: Voluntary Release by Winning Buyer & Re-reservation
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 5: Voluntary Release & Subsequent Acquisition${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 5: Voluntary Release & Subsequent Acquisition${colors.reset}`
+    );
 
     const winnerToken = winnerBuyerId === buyerA._id.toString() ? tokenBuyerA : tokenBuyerB;
 
@@ -395,10 +415,7 @@ async function runTests() {
       reacquireRes.status === 201,
       'Previously blocked buyer can now successfully acquire reservation (201 Created)'
     );
-    assert(
-      reacquireRes.body?.data?.reservation?.status === 'ACTIVE',
-      'New reservation is ACTIVE'
-    );
+    assert(reacquireRes.body?.data?.reservation?.status === 'ACTIVE', 'New reservation is ACTIVE');
 
     const currentActiveRes = await Reservation.findById(reacquireRes.body.data.reservation._id);
 
@@ -411,7 +428,9 @@ async function runTests() {
     await Reservation.findByIdAndUpdate(currentActiveRes._id, {
       expiresAt: new Date(Date.now() - 10000),
     });
-    console.log(`  ${colors.blue}Artificially set reservation expiresAt to the past (expired)...${colors.reset}`);
+    console.log(
+      `  ${colors.blue}Artificially set reservation expiresAt to the past (expired)...${colors.reset}`
+    );
 
     // Now Buyer C attempts to reserve the listing whose reservation just expired
     const expiredAcquireRes = await apiCall(
@@ -439,7 +458,9 @@ async function runTests() {
     // =================================================================
     // Scenario 7: Database Unique Partial Index Verification
     // =================================================================
-    console.log(`\n${colors.bold}Scenario 7: Database Unique Partial Index Verification${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 7: Database Unique Partial Index Verification${colors.reset}`
+    );
 
     const resIndexes = await Reservation.collection.indexes();
     const hasUniqueActiveIndex = resIndexes.some(
@@ -471,7 +492,6 @@ async function runTests() {
       duplicateIndexCaught,
       'MongoDB engine-level E11000 duplicate key error enforced for concurrent active reservations'
     );
-
   } catch (err) {
     console.error(`${colors.red}Unhandled test suite exception:${colors.reset}`, err);
     failedCount++;
@@ -480,7 +500,13 @@ async function runTests() {
     // CLEANUP
     // -----------------------------------------------------------------
     console.log(`\n${colors.yellow}[CLEANUP] Cleaning up test fixtures...${colors.reset}`);
-    const userIds = [seller?._id, buyerA?._id, buyerB?._id, buyerC?._id, buyerSuspended?._id].filter(Boolean);
+    const userIds = [
+      seller?._id,
+      buyerA?._id,
+      buyerB?._id,
+      buyerC?._id,
+      buyerSuspended?._id,
+    ].filter(Boolean);
     const assetIds = [assetActive?._id, assetCancelled?._id].filter(Boolean);
     const listingIds = [listingActive?._id, listingCancelled?._id].filter(Boolean);
 
@@ -498,9 +524,15 @@ async function runTests() {
     await mongoose.disconnect();
     console.log(`${colors.blue}Database disconnected cleanly.${colors.reset}\n`);
 
-    console.log(`${colors.bold}${colors.cyan}======================================================`);
-    console.log(`TEST SUMMARY: ${colors.green}${passedCount} passed${colors.cyan}, ${failedCount > 0 ? colors.red : colors.green}${failedCount} failed${colors.reset}`);
-    console.log(`${colors.bold}${colors.cyan}======================================================${colors.reset}\n`);
+    console.log(
+      `${colors.bold}${colors.cyan}======================================================`
+    );
+    console.log(
+      `TEST SUMMARY: ${colors.green}${passedCount} passed${colors.cyan}, ${failedCount > 0 ? colors.red : colors.green}${failedCount} failed${colors.reset}`
+    );
+    console.log(
+      `${colors.bold}${colors.cyan}======================================================${colors.reset}\n`
+    );
 
     if (failedCount > 0) {
       process.exit(1);

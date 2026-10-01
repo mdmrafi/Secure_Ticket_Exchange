@@ -19,11 +19,7 @@ import {
   VerificationStatus,
   TransactionStatus,
 } from '../../common/constants/asset-types.constant.js';
-import {
-  NotFoundError,
-  BadRequestError,
-  ForbiddenError,
-} from '../../common/errors/index.js';
+import { NotFoundError, BadRequestError, ForbiddenError } from '../../common/errors/index.js';
 import { logger } from '../../config/logger.config.js';
 
 export class AdminService {
@@ -507,7 +503,11 @@ export class AdminService {
   /**
    * Action 4: Approve Manual Verification (ADMIN & MODERATOR)
    */
-  async approveManualVerification(verificationId, adminUser, { notes = '', confidenceScore = 100 } = {}) {
+  async approveManualVerification(
+    verificationId,
+    adminUser,
+    { notes = '', confidenceScore = 100 } = {}
+  ) {
     const verification = await Verification.findById(verificationId);
     if (!verification) throw new NotFoundError('Verification record not found');
 
@@ -553,13 +553,17 @@ export class AdminService {
     });
 
     // 2. Publish asset.verified event
-    publishEvent(EventNames.ASSET_VERIFIED, {
-      assetId: verification.assetId.toString(),
-      ownerId: asset?.ownerId?.toString() || verification.requestedBy?.toString(),
-      verificationId: verification._id.toString(),
-      status: VerificationStatus.VERIFIED,
-      confidenceScore,
-    }, { id: adminUser.userId || adminUser.id }).catch(() => {});
+    publishEvent(
+      EventNames.ASSET_VERIFIED,
+      {
+        assetId: verification.assetId.toString(),
+        ownerId: asset?.ownerId?.toString() || verification.requestedBy?.toString(),
+        verificationId: verification._id.toString(),
+        status: VerificationStatus.VERIFIED,
+        confidenceScore,
+      },
+      { id: adminUser.userId || adminUser.id }
+    ).catch(() => {});
 
     // 3. Notify owner
     const ownerId = asset?.ownerId || verification.requestedBy;

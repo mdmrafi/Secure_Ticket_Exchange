@@ -179,7 +179,12 @@ export class MockPaymentProvider extends PaymentProvider {
    *
    * @param {{ paymentSessionId: string, amount: number, currency?: string, reason?: string }} param0
    */
-  async refundPayment({ paymentSessionId, amount, currency = 'BDT', reason = 'Transaction cancelled' }) {
+  async refundPayment({
+    paymentSessionId,
+    amount,
+    currency = 'BDT',
+    reason = 'Transaction cancelled',
+  }) {
     const session = this.sessions.get(paymentSessionId);
     const refundId = `MOCK-REF-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
     const refundedAt = new Date();
@@ -243,7 +248,8 @@ export class MockPaymentProvider extends PaymentProvider {
       session.status = 'FAILED';
       session.paidAt = null;
       session.transactionRef = ref;
-      session.failureReason = failureReason || 'Card declined or insufficient balance in payment source';
+      session.failureReason =
+        failureReason || 'Card declined or insufficient balance in payment source';
     }
 
     return {
@@ -290,7 +296,7 @@ export class MockPaymentProvider extends PaymentProvider {
       amount,
       currency: currency.toUpperCase(),
       timestamp,
-      failureReason: outcome === 'SUCCESS' ? null : (failureReason || 'Payment failed'),
+      failureReason: outcome === 'SUCCESS' ? null : failureReason || 'Payment failed',
     };
 
     const signature = this.computeHmac(payload);

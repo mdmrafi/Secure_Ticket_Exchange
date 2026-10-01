@@ -1,8 +1,5 @@
 import mongoose from 'mongoose';
-import {
-  TransactionStatus,
-  PaymentStatus,
-} from '../../common/constants/asset-types.constant.js';
+import { TransactionStatus, PaymentStatus } from '../../common/constants/asset-types.constant.js';
 
 const transactionSchema = new mongoose.Schema(
   {

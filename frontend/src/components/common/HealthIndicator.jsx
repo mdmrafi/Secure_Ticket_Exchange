@@ -64,7 +64,9 @@ export const HealthIndicator = () => {
               <span className="text-slate-400 flex items-center gap-1.5">
                 <Server className="w-3 h-3 text-slate-400" /> Backend Core
               </span>
-              <span className={isLive ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}>
+              <span
+                className={isLive ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}
+              >
                 {isLive ? '200 OK (v1.0.0)' : 'Unreachable'}
               </span>
             </div>
@@ -78,8 +80,8 @@ export const HealthIndicator = () => {
                   isDbConnected
                     ? 'text-emerald-400 font-medium'
                     : health
-                    ? 'text-amber-400 font-medium'
-                    : 'text-rose-400 font-medium'
+                      ? 'text-amber-400 font-medium'
+                      : 'text-rose-400 font-medium'
                 }
               >
                 {health?.database?.status || 'Offline'}

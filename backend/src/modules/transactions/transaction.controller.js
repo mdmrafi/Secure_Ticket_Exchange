@@ -12,10 +12,7 @@ export class TransactionController {
    * POST /api/v1/transactions
    */
   initiate = asyncHandler(async (req, res) => {
-    const transaction = await this.service.initiateTransaction(
-      req.user.userId,
-      req.body.listingId
-    );
+    const transaction = await this.service.initiateTransaction(req.user.userId, req.body.listingId);
     return ApiResponse.created(res, transaction, 'Exchange transaction initiated');
   });
 
@@ -24,10 +21,7 @@ export class TransactionController {
    * POST /api/v1/transactions/:id/pay
    */
   createPaymentSession = asyncHandler(async (req, res) => {
-    const result = await this.service.createPaymentSession(
-      req.params.id,
-      req.user.userId
-    );
+    const result = await this.service.createPaymentSession(req.params.id, req.user.userId);
     return ApiResponse.success(res, result, 'Payment session initialized');
   });
 
@@ -49,11 +43,7 @@ export class TransactionController {
    * POST /api/v1/transactions/:id/process-payment
    */
   processPayment = asyncHandler(async (req, res) => {
-    const transaction = await this.service.processPayment(
-      req.params.id,
-      req.user.userId,
-      req.body
-    );
+    const transaction = await this.service.processPayment(req.params.id, req.user.userId, req.body);
     return ApiResponse.success(res, transaction, 'Payment processed successfully');
   });
 
@@ -62,11 +52,7 @@ export class TransactionController {
    * POST /api/v1/transactions/:id/callback
    */
   callback = asyncHandler(async (req, res) => {
-    const result = await this.service.handlePaymentCallback(
-      req.params.id,
-      req.body,
-      req.headers
-    );
+    const result = await this.service.handlePaymentCallback(req.params.id, req.body, req.headers);
     return ApiResponse.success(res, result, 'Payment callback received');
   });
 

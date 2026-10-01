@@ -1,4 +1,8 @@
-import { AssetTypes, AssetStatus, VerificationStatus } from '../../../common/constants/asset-types.constant.js';
+import {
+  AssetTypes,
+  AssetStatus,
+  VerificationStatus,
+} from '../../../common/constants/asset-types.constant.js';
 
 /**
  * Base abstract domain class for all Assets in the system.

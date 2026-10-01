@@ -1,6 +1,13 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShieldCheck, Ticket, Layers, ArrowLeftRight, CheckCircle2, UserCircle } from 'lucide-react';
+import {
+  ShieldCheck,
+  Ticket,
+  Layers,
+  ArrowLeftRight,
+  CheckCircle2,
+  UserCircle,
+} from 'lucide-react';
 import { HealthIndicator } from '../common/HealthIndicator.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 
@@ -64,7 +71,9 @@ export const Navbar = () => {
             <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-slate-800">
               <button
                 className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-slate-700/60 hover:border-slate-500 transition-all cursor-pointer"
-                onClick={() => alert('Authentication module scaffolded. Ready for JWT / Clerk integration.')}
+                onClick={() =>
+                  alert('Authentication module scaffolded. Ready for JWT / Clerk integration.')
+                }
               >
                 <UserCircle className="w-3.5 h-3.5" />
                 {user ? user.name : 'Sign In'}

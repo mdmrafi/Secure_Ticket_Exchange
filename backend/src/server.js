@@ -1,9 +1,10 @@
 import http from 'http';
 import { createApp } from './loaders/app.js';
-import { initSocketIO } from './loaders/socket.js';
+import { initSocketIO, getSocketIO } from './loaders/socket.js';
 import { connectDatabase, disconnectDatabase } from './config/db.config.js';
 import { env } from './config/env.config.js';
 import { logger } from './config/logger.config.js';
+import { metricsService } from './modules/monitoring/metrics.service.js';
 
 // Server bootstrap entry point
 const startServer = async () => {
@@ -34,10 +35,26 @@ const startServer = async () => {
 
   // Graceful shutdown
   const gracefulShutdown = async (signal) => {
-    logger.info(`${signal} signal received. Starting graceful shutdown...`);
+    logger.info(`${signal} signal received. Marking service as shutting down (readiness=false)...`);
+    metricsService.setShuttingDown(true);
+
+    // Give reverse proxies and load balancers a brief window to route around this instance
+    const drainDelayMs = env.NODE_ENV === 'production' || env.NODE_ENV === 'staging' ? 1500 : 100;
+    await new Promise((resolve) => setTimeout(resolve, drainDelayMs));
+
+    // Gracefully disconnect Socket.IO
+    const io = getSocketIO();
+    if (io) {
+      try {
+        io.close();
+        logger.info('Socket.IO connections closed cleanly');
+      } catch (ioErr) {
+        logger.warn({ err: ioErr }, 'Warning closing Socket.IO connections');
+      }
+    }
 
     server.close(async () => {
-      logger.info('HTTP and WebSocket server closed');
+      logger.info('HTTP server closed and in-flight requests drained');
       try {
         await disconnectDatabase();
         logger.info('Database connection closed cleanly');
@@ -48,11 +65,11 @@ const startServer = async () => {
       }
     });
 
-    // Force shutdown if taking longer than 10s
+    // Force shutdown if taking longer than 15s
     setTimeout(() => {
       logger.error('Could not close connections in time, forcefully shutting down');
       process.exit(1);
-    }, 10000);
+    }, 15000).unref();
   };
 
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

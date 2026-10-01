@@ -16,7 +16,8 @@ export class FutureExternalKYCProvider extends KYCProvider {
     super();
     this.name = config.name || 'future-external-kyc';
     this.apiKey = config.apiKey || env.KYC_EXTERNAL_API_KEY || '';
-    this.baseUrl = config.baseUrl || env.KYC_EXTERNAL_BASE_URL || 'https://api.external-kyc-provider.com/v1';
+    this.baseUrl =
+      config.baseUrl || env.KYC_EXTERNAL_BASE_URL || 'https://api.external-kyc-provider.com/v1';
     this.webhookSecret = config.webhookSecret || process.env.KYC_WEBHOOK_SECRET || '';
   }
 

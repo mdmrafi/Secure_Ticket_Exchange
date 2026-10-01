@@ -104,9 +104,7 @@ export class KYCRepository {
    * @returns {Promise<KYCAuditLog[]>}
    */
   async getAuditLogs(userId, limit = 50) {
-    return KYCAuditLog.find({ userId })
-      .sort({ timestamp: -1 })
-      .limit(limit);
+    return KYCAuditLog.find({ userId }).sort({ timestamp: -1 }).limit(limit);
   }
 }
 

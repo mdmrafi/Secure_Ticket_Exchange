@@ -14,11 +14,7 @@ const router = Router();
 // Strict RBAC: All fraud review APIs require Admin authentication
 router.use(authenticate, authorize('ADMIN'));
 
-router.get(
-  '/assessments',
-  validate(queryAssessmentsSchema),
-  fraudController.getAssessments
-);
+router.get('/assessments', validate(queryAssessmentsSchema), fraudController.getAssessments);
 
 router.get(
   '/assessments/:id',
@@ -32,10 +28,6 @@ router.post(
   fraudController.reviewAssessment
 );
 
-router.post(
-  '/assess',
-  validate(assessAssetSchema),
-  fraudController.triggerAssessment
-);
+router.post('/assess', validate(assessAssetSchema), fraudController.triggerAssessment);
 
 export const fraudRoutes = router;

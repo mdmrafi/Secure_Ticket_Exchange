@@ -49,7 +49,7 @@ export const ALLOWED_TRANSFER_TRANSITIONS = {
     TransferRequestStatus.REJECTED,
   ],
   [TransferRequestStatus.COMPLETED]: [], // Terminal state
-  [TransferRequestStatus.REJECTED]: [],  // Terminal state
+  [TransferRequestStatus.REJECTED]: [], // Terminal state
   [TransferRequestStatus.CANCELLED]: [], // Terminal state
 };
 
@@ -74,9 +74,9 @@ export class TransferService {
     if (!allowedNext.includes(targetStatus)) {
       throw new BadRequestError(
         `Invalid transfer state transition: Cannot transition from ${currentStatus} to ${targetStatus}. ` +
-        (allowedNext.length > 0
-          ? `Allowed next states: [${allowedNext.join(', ')}]. Intermediate steps must be observed.`
-          : 'This state is terminal and cannot transition further.')
+          (allowedNext.length > 0
+            ? `Allowed next states: [${allowedNext.join(', ')}]. Intermediate steps must be observed.`
+            : 'This state is terminal and cannot transition further.')
       );
     }
   }
@@ -92,8 +92,12 @@ export class TransferService {
     if (userRole === 'ADMIN') return true;
 
     const uId = userId ? userId.toString() : '';
-    const fromId = transferReq.fromUserId?._id ? transferReq.fromUserId._id.toString() : transferReq.fromUserId?.toString();
-    const toId = transferReq.toUserId?._id ? transferReq.toUserId._id.toString() : transferReq.toUserId?.toString();
+    const fromId = transferReq.fromUserId?._id
+      ? transferReq.fromUserId._id.toString()
+      : transferReq.fromUserId?.toString();
+    const toId = transferReq.toUserId?._id
+      ? transferReq.toUserId._id.toString()
+      : transferReq.toUserId?.toString();
 
     if (uId !== fromId && uId !== toId) {
       throw new ForbiddenError('You are not authorized to access this asset transfer request');
@@ -512,7 +516,10 @@ export class TransferService {
           assetId: asset._id.toString(),
           fromUserId: fromUser._id.toString(),
           toUserId: toUser._id.toString(),
-          transactionId: processingReq.transactionId?._id?.toString() || processingReq.transactionId?.toString() || null,
+          transactionId:
+            processingReq.transactionId?._id?.toString() ||
+            processingReq.transactionId?.toString() ||
+            null,
           toUserName: toUser.name,
           toUserEmail: toUser.email,
         },
@@ -634,7 +641,12 @@ export class TransferService {
    * @param {string} reason
    * @param {string} [actorRole='USER']
    */
-  async cancelTransfer(requestId, actorId, reason = 'Transfer cancelled by user', actorRole = 'USER') {
+  async cancelTransfer(
+    requestId,
+    actorId,
+    reason = 'Transfer cancelled by user',
+    actorRole = 'USER'
+  ) {
     const transferReq = await this.repo.findById(requestId);
     if (!transferReq) {
       throw new NotFoundError('Transfer request not found');
@@ -656,7 +668,12 @@ export class TransferService {
       fromStatus: previousStatus,
       toStatus: TransferRequestStatus.CANCELLED,
       actorId,
-      actorRole: actorRole === 'ADMIN' ? 'ADMIN' : (actorId.toString() === transferReq.fromUserId._id.toString() ? 'SELLER' : 'BUYER'),
+      actorRole:
+        actorRole === 'ADMIN'
+          ? 'ADMIN'
+          : actorId.toString() === transferReq.fromUserId._id.toString()
+            ? 'SELLER'
+            : 'BUYER',
       metadata: { reason, cancelledBy: actorId },
     });
 

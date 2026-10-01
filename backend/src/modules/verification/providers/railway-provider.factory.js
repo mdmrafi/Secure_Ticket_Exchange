@@ -17,7 +17,10 @@ providerRegistry.set('default', mockProvider);
  */
 export const registerRailwayVerificationProvider = (name, provider) => {
   providerRegistry.set(name.toLowerCase(), provider);
-  logger.info({ providerName: name }, '[RailwayProviderFactory] Registered custom railway provider');
+  logger.info(
+    { providerName: name },
+    '[RailwayProviderFactory] Registered custom railway provider'
+  );
 };
 
 /**
@@ -30,7 +33,10 @@ export const getRailwayVerificationProvider = (name = 'mock') => {
   const provider = providerRegistry.get(selectedName);
 
   if (!provider) {
-    logger.warn({ requested: name, fallback: 'mock' }, '[RailwayProviderFactory] Falling back to mock');
+    logger.warn(
+      { requested: name, fallback: 'mock' },
+      '[RailwayProviderFactory] Falling back to mock'
+    );
     return mockProvider;
   }
 

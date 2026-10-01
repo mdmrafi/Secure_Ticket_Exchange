@@ -116,12 +116,7 @@ export const verifyFileMagicBytes = (filePath, expectedMimeType) => {
 
     // PDF signature: %PDF- (25 50 44 46)
     if (expectedMimeType === 'application/pdf') {
-      return (
-        buffer[0] === 0x25 &&
-        buffer[1] === 0x50 &&
-        buffer[2] === 0x44 &&
-        buffer[3] === 0x46
-      );
+      return buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46;
     }
 
     // WEBP signature: RIFF....WEBP
@@ -166,13 +161,14 @@ export const ticketUploadMiddleware = (req, res, next) => {
 
     // Extract the uploaded file from whichever field was provided
     const file =
-      req.files?.ticket?.[0] ||
-      req.files?.document?.[0] ||
-      req.files?.file?.[0] ||
-      req.file;
+      req.files?.ticket?.[0] || req.files?.document?.[0] || req.files?.file?.[0] || req.file;
 
     if (!file) {
-      return next(new BadRequestError('Please provide a ticket file to upload (field: ticket, document, or file).'));
+      return next(
+        new BadRequestError(
+          'Please provide a ticket file to upload (field: ticket, document, or file).'
+        )
+      );
     }
 
     // Validate magic bytes to guard against renamed malicious files

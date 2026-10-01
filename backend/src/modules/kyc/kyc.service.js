@@ -1,11 +1,7 @@
 import { kycRepository } from './kyc.repository.js';
 import { getKYCProvider } from './providers/kyc-provider.factory.js';
 import { KYCStatus, KYCAuditAction, KYCVerificationLevel } from './kyc.constant.js';
-import {
-  encryptKYCData,
-  hashDocumentNumber,
-  maskDocumentNumber,
-} from './utils/kyc-crypto.util.js';
+import { encryptKYCData, hashDocumentNumber, maskDocumentNumber } from './utils/kyc-crypto.util.js';
 import { User } from '../users/user.model.js';
 import {
   BadRequestError,
@@ -170,9 +166,7 @@ export class KYCService {
     }
 
     if (kycRecord.status === KYCStatus.VERIFIED) {
-      throw new ConflictError(
-        'Identity is already verified. No further submission is required.'
-      );
+      throw new ConflictError('Identity is already verified. No further submission is required.');
     }
 
     const fromStatus = kycRecord.status;
@@ -182,7 +176,10 @@ export class KYCService {
     const documentHash = hashDocumentNumber(documentNumber);
     const isDuplicate = await this.repo.isDocumentDuplicate(documentHash, userId);
     if (isDuplicate) {
-      logger.warn({ userId }, 'Duplicate synthetic document number detected across distinct accounts');
+      logger.warn(
+        { userId },
+        'Duplicate synthetic document number detected across distinct accounts'
+      );
     }
 
     // 2. Encrypt sensitive PII using AES-256-GCM
@@ -223,7 +220,8 @@ export class KYCService {
 
     if (toStatus === KYCStatus.VERIFIED) {
       updateData.verifiedAt = now;
-      updateData.expiresAt = evaluation.expiresAt || new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+      updateData.expiresAt =
+        evaluation.expiresAt || new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
       updateData.rejectionReason = null;
       updateData.reviewNotes = null;
     } else if (toStatus === KYCStatus.REJECTED) {
@@ -262,7 +260,10 @@ export class KYCService {
       toStatus,
       action: auditAction,
       changedBy: 'PROVIDER',
-      reason: evaluation.rejectionReason || evaluation.reviewNotes || 'Verification completed by provider',
+      reason:
+        evaluation.rejectionReason ||
+        evaluation.reviewNotes ||
+        'Verification completed by provider',
       ipAddress: clientContext.ip,
       userAgent: clientContext.userAgent,
       metadata: {

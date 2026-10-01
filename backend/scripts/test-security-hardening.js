@@ -12,7 +12,11 @@ import { Report } from '../src/modules/reports/report.model.js';
 import { KYCRecord } from '../src/modules/kyc/kyc.model.js';
 import { Transaction } from '../src/modules/transactions/transaction.model.js';
 import { Listing } from '../src/modules/listings/listing.model.js';
-import { AssetStatus, TransactionStatus, PaymentStatus } from '../src/common/constants/asset-types.constant.js';
+import {
+  AssetStatus,
+  TransactionStatus,
+  PaymentStatus,
+} from '../src/common/constants/asset-types.constant.js';
 import { KYCStatus } from '../src/modules/kyc/kyc.constant.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -107,12 +111,20 @@ async function apiCall(endpoint, method = 'GET', body = null, token = null, cust
 }
 
 async function runSecurityTestSuite() {
-  console.log(`\n${colors.bold}${colors.blue}======================================================================${colors.reset}`);
-  console.log(`${colors.bold}${colors.blue}  DEFENSIVE BACKEND SECURITY HARDENING & ATTACK SIMULATION SUITE     ${colors.reset}`);
-  console.log(`${colors.bold}${colors.blue}======================================================================${colors.reset}\n`);
+  console.log(
+    `\n${colors.bold}${colors.blue}======================================================================${colors.reset}`
+  );
+  console.log(
+    `${colors.bold}${colors.blue}  DEFENSIVE BACKEND SECURITY HARDENING & ATTACK SIMULATION SUITE     ${colors.reset}`
+  );
+  console.log(
+    `${colors.bold}${colors.blue}======================================================================${colors.reset}\n`
+  );
 
   await mongoose.connect(env.MONGODB_URI);
-  console.log(`${colors.cyan}ℹ Connected to MongoDB Atlas for security attack simulations${colors.reset}\n`);
+  console.log(
+    `${colors.cyan}ℹ Connected to MongoDB Atlas for security attack simulations${colors.reset}\n`
+  );
 
   const timestamp = Date.now();
   const testUsers = {
@@ -235,16 +247,26 @@ async function runSecurityTestSuite() {
     const res1a = await apiCall('/users/profile', 'GET', null, 'completely-bogus-token-string');
     assert(res1a.status === 401, 'Arbitrary string token rejected with 401 Unauthorized');
 
-    const res1b = await apiCall('/users/profile', 'GET', null, 'eyJhbGciOiJIUzI1NiJ9.invalid-payload.invalid-signature');
+    const res1b = await apiCall(
+      '/users/profile',
+      'GET',
+      null,
+      'eyJhbGciOiJIUzI1NiJ9.invalid-payload.invalid-signature'
+    );
     assert(res1b.status === 401, 'Malformed JWT structure rejected with 401 Unauthorized');
 
     const res1c = await apiCall('/auth/me', 'GET', null, '');
-    assert(res1c.status === 401, 'Missing token on protected endpoint rejected with 401 Unauthorized');
+    assert(
+      res1c.status === 401,
+      'Missing token on protected endpoint rejected with 401 Unauthorized'
+    );
 
     // =========================================================================
     // 2. ATTACK VECTOR: MODIFIED JWT (TAMPERING & ALGORITHM CONFUSION)
     // =========================================================================
-    console.log(`\n${colors.bold}2. Attack Vector: Modified JWT & Algorithm Attacks${colors.reset}`);
+    console.log(
+      `\n${colors.bold}2. Attack Vector: Modified JWT & Algorithm Attacks${colors.reset}`
+    );
 
     // Tampered payload with original signature
     const validUserToken = testTokens.userA;
@@ -255,7 +277,10 @@ async function runSecurityTestSuite() {
     const tamperedToken = `${headerB64}.${forgedPayloadB64}.${signatureB64}`;
 
     const res2a = await apiCall('/admin/metrics', 'GET', null, tamperedToken);
-    assert(res2a.status === 401, 'JWT with forged role & tampered payload rejected with 401 Unauthorized');
+    assert(
+      res2a.status === 401,
+      'JWT with forged role & tampered payload rejected with 401 Unauthorized'
+    );
 
     // Token signed with attacker's rogue secret
     const rogueToken = jwt.sign(
@@ -264,11 +289,18 @@ async function runSecurityTestSuite() {
       { algorithm: 'HS256' }
     );
     const res2b = await apiCall('/admin/metrics', 'GET', null, rogueToken);
-    assert(res2b.status === 401, 'JWT signed with untrusted secret key rejected with 401 Unauthorized');
+    assert(
+      res2b.status === 401,
+      'JWT signed with untrusted secret key rejected with 401 Unauthorized'
+    );
 
     // Algorithm 'none' attack: unsigned token header
-    const noneHeader = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
-    const nonePayload = Buffer.from(JSON.stringify({ userId: testUsers.admin._id.toString(), role: 'ADMIN' })).toString('base64url');
+    const noneHeader = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString(
+      'base64url'
+    );
+    const nonePayload = Buffer.from(
+      JSON.stringify({ userId: testUsers.admin._id.toString(), role: 'ADMIN' })
+    ).toString('base64url');
     const noneToken = `${noneHeader}.${nonePayload}.`;
     const res2c = await apiCall('/admin/metrics', 'GET', null, noneToken);
     assert(res2c.status === 401, "JWT algorithm 'none' spoofing rejected with 401 Unauthorized");
@@ -276,44 +308,106 @@ async function runSecurityTestSuite() {
     // =========================================================================
     // 3. ATTACK VECTOR: ANOTHER USER'S RESOURCE ID (IDOR DEFENSE)
     // =========================================================================
-    console.log(`\n${colors.bold}3. Attack Vector: Another User's Resource ID (IDOR Attacks)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}3. Attack Vector: Another User's Resource ID (IDOR Attacks)${colors.reset}`
+    );
 
     // User B tries to view User A's private/draft asset
-    const res3a = await apiCall(`/assets/${testFixtures.assetUserA._id}`, 'GET', null, testTokens.userB);
-    assert(res3a.status === 403, "IDOR: User B viewing User A's private asset blocked with 403 Forbidden");
+    const res3a = await apiCall(
+      `/assets/${testFixtures.assetUserA._id}`,
+      'GET',
+      null,
+      testTokens.userB
+    );
+    assert(
+      res3a.status === 403,
+      "IDOR: User B viewing User A's private asset blocked with 403 Forbidden"
+    );
 
     // User B tries to modify User A's asset
-    const res3b = await apiCall(`/assets/${testFixtures.assetUserA._id}`, 'PATCH', { title: 'Compromised Title' }, testTokens.userB);
-    assert(res3b.status === 403, "IDOR: User B modifying User A's asset blocked with 403 Forbidden");
+    const res3b = await apiCall(
+      `/assets/${testFixtures.assetUserA._id}`,
+      'PATCH',
+      { title: 'Compromised Title' },
+      testTokens.userB
+    );
+    assert(
+      res3b.status === 403,
+      "IDOR: User B modifying User A's asset blocked with 403 Forbidden"
+    );
 
     // User B tries to delete User A's asset
-    const res3c = await apiCall(`/assets/${testFixtures.assetUserA._id}`, 'DELETE', null, testTokens.userB);
+    const res3c = await apiCall(
+      `/assets/${testFixtures.assetUserA._id}`,
+      'DELETE',
+      null,
+      testTokens.userB
+    );
     assert(res3c.status === 403, "IDOR: User B deleting User A's asset blocked with 403 Forbidden");
 
     // User B tries to download User A's ticket document
-    const res3d = await apiCall(`/assets/${testFixtures.assetUserA._id}/document`, 'GET', null, testTokens.userB);
-    assert(res3d.status === 403, "IDOR: User B accessing User A's ticket document blocked with 403 Forbidden");
+    const res3d = await apiCall(
+      `/assets/${testFixtures.assetUserA._id}/document`,
+      'GET',
+      null,
+      testTokens.userB
+    );
+    assert(
+      res3d.status === 403,
+      "IDOR: User B accessing User A's ticket document blocked with 403 Forbidden"
+    );
 
     // User B tries to view User A's report details
-    const res3e = await apiCall(`/reports/${testFixtures.reportUserA._id}`, 'GET', null, testTokens.userB);
-    assert(res3e.status === 403, "IDOR: User B reading User A's private report blocked with 403 Forbidden");
+    const res3e = await apiCall(
+      `/reports/${testFixtures.reportUserA._id}`,
+      'GET',
+      null,
+      testTokens.userB
+    );
+    assert(
+      res3e.status === 403,
+      "IDOR: User B reading User A's private report blocked with 403 Forbidden"
+    );
 
     // User B tries to view User A's KYC verification status
-    const res3f = await apiCall(`/kyc/status/${testUsers.userA._id}`, 'GET', null, testTokens.userB);
-    assert(res3f.status === 403, "IDOR: User B querying User A's KYC status blocked with 403 Forbidden");
+    const res3f = await apiCall(
+      `/kyc/status/${testUsers.userA._id}`,
+      'GET',
+      null,
+      testTokens.userB
+    );
+    assert(
+      res3f.status === 403,
+      "IDOR: User B querying User A's KYC status blocked with 403 Forbidden"
+    );
 
     // User B tries to access User A's transaction
-    const res3g = await apiCall(`/transactions/${testFixtures.transactionUserA._id}`, 'GET', null, testTokens.userB);
-    assert(res3g.status === 403, "IDOR: User B accessing User A's transaction blocked with 403 Forbidden");
+    const res3g = await apiCall(
+      `/transactions/${testFixtures.transactionUserA._id}`,
+      'GET',
+      null,
+      testTokens.userB
+    );
+    assert(
+      res3g.status === 403,
+      "IDOR: User B accessing User A's transaction blocked with 403 Forbidden"
+    );
 
     // Owner (User A) CAN access their own report
-    const res3h = await apiCall(`/reports/${testFixtures.reportUserA._id}`, 'GET', null, testTokens.userA);
-    assert(res3h.status === 200, "Legitimate Access: Owner User A can retrieve own report");
+    const res3h = await apiCall(
+      `/reports/${testFixtures.reportUserA._id}`,
+      'GET',
+      null,
+      testTokens.userA
+    );
+    assert(res3h.status === 200, 'Legitimate Access: Owner User A can retrieve own report');
 
     // =========================================================================
     // 4. ATTACK VECTOR: MALFORMED MONGODB INPUT (NOSQL INJECTION)
     // =========================================================================
-    console.log(`\n${colors.bold}4. Attack Vector: Malformed MongoDB Input (NoSQL Injection)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}4. Attack Vector: Malformed MongoDB Input (NoSQL Injection)${colors.reset}`
+    );
 
     // NoSQL operator injection in login: { "email": { "$gt": "" }, "password": "any" }
     const res4a = await apiCall('/auth/login', 'POST', {
@@ -340,12 +434,17 @@ async function runSecurityTestSuite() {
       $where: 'sleep(5000)',
       password: 'Password123!',
     });
-    assert(res4c.status === 400 || res4c.status === 401, '$where operator injection stripped & rejected safely');
+    assert(
+      res4c.status === 400 || res4c.status === 401,
+      '$where operator injection stripped & rejected safely'
+    );
 
     // =========================================================================
     // 5. ATTACK VECTOR: OVERSIZED REQUEST (DOS PAYLOAD BOMB)
     // =========================================================================
-    console.log(`\n${colors.bold}5. Attack Vector: Oversized Request Payload (DoS Prevention)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}5. Attack Vector: Oversized Request Payload (DoS Prevention)${colors.reset}`
+    );
 
     // Generate payload larger than 200KB limit (approx 350KB)
     const largeBomb = 'A'.repeat(350 * 1024);
@@ -354,7 +453,10 @@ async function runSecurityTestSuite() {
       password: 'Password123!',
       bomb: largeBomb,
     });
-    assert(res5.status === 413, 'Oversized JSON payload (>200KB) rejected with 413 Payload Too Large');
+    assert(
+      res5.status === 413,
+      'Oversized JSON payload (>200KB) rejected with 413 Payload Too Large'
+    );
 
     // =========================================================================
     // 6. ATTACK VECTOR: MALICIOUS FILE UPLOAD HANDLING
@@ -375,7 +477,10 @@ async function runSecurityTestSuite() {
       body: phpFormData,
     });
     const phpBody = await res6a.json().catch(() => null);
-    assert(res6a.status === 400, 'Prohibited executable file extension (.php) rejected with 400 Bad Request');
+    assert(
+      res6a.status === 400,
+      'Prohibited executable file extension (.php) rejected with 400 Bad Request'
+    );
 
     // B. Prohibited shell script: attack.sh
     const shFormData = new FormData();
@@ -415,7 +520,9 @@ async function runSecurityTestSuite() {
     // =========================================================================
     // 7. ATTACK VECTOR: UNAUTHORIZED ADMIN ENDPOINT & PRIVILEGE ESCALATION
     // =========================================================================
-    console.log(`\n${colors.bold}7. Attack Vector: Unauthorized Admin Endpoints & Privilege Escalation${colors.reset}`);
+    console.log(
+      `\n${colors.bold}7. Attack Vector: Unauthorized Admin Endpoints & Privilege Escalation${colors.reset}`
+    );
 
     // Regular user attempting to access admin metrics
     const res7a = await apiCall('/admin/metrics', 'GET', null, testTokens.userA);
@@ -426,16 +533,40 @@ async function runSecurityTestSuite() {
     assert(res7b.status === 403, 'Regular USER calling /admin/users blocked with 403 Forbidden');
 
     // Regular user attempting to suspend user
-    const res7c = await apiCall(`/admin/users/${testUsers.userB._id}/suspend`, 'PATCH', { reason: 'malicious' }, testTokens.userA);
-    assert(res7c.status === 403, 'Regular USER attempting user suspension blocked with 403 Forbidden');
+    const res7c = await apiCall(
+      `/admin/users/${testUsers.userB._id}/suspend`,
+      'PATCH',
+      { reason: 'malicious' },
+      testTokens.userA
+    );
+    assert(
+      res7c.status === 403,
+      'Regular USER attempting user suspension blocked with 403 Forbidden'
+    );
 
     // Moderator attempting admin-only user suspension
-    const res7d = await apiCall(`/admin/users/${testUsers.userB._id}/suspend`, 'PATCH', { reason: 'unauthorized mod' }, testTokens.moderator);
-    assert(res7d.status === 403, 'MODERATOR attempting ADMIN-only suspension blocked with 403 Forbidden');
+    const res7d = await apiCall(
+      `/admin/users/${testUsers.userB._id}/suspend`,
+      'PATCH',
+      { reason: 'unauthorized mod' },
+      testTokens.moderator
+    );
+    assert(
+      res7d.status === 403,
+      'MODERATOR attempting ADMIN-only suspension blocked with 403 Forbidden'
+    );
 
     // Moderator attempting admin-only transaction freeze
-    const res7e = await apiCall(`/admin/transactions/${testFixtures.transactionUserA._id}/freeze`, 'PATCH', { reason: 'unauthorized mod' }, testTokens.moderator);
-    assert(res7e.status === 403, 'MODERATOR attempting ADMIN-only transaction freeze blocked with 403 Forbidden');
+    const res7e = await apiCall(
+      `/admin/transactions/${testFixtures.transactionUserA._id}/freeze`,
+      'PATCH',
+      { reason: 'unauthorized mod' },
+      testTokens.moderator
+    );
+    assert(
+      res7e.status === 403,
+      'MODERATOR attempting ADMIN-only transaction freeze blocked with 403 Forbidden'
+    );
 
     // Privilege escalation on registration: attempting to register with role 'ADMIN'
     const res7f = await apiCall('/auth/register', 'POST', {
@@ -458,7 +589,9 @@ async function runSecurityTestSuite() {
     // =========================================================================
     // 8. SECURITY HTTP HEADERS & SENSITIVE DATA REDACTION
     // =========================================================================
-    console.log(`\n${colors.bold}8. Security HTTP Headers, CORS & Sensitive Data Redaction${colors.reset}`);
+    console.log(
+      `\n${colors.bold}8. Security HTTP Headers, CORS & Sensitive Data Redaction${colors.reset}`
+    );
 
     // Verify security headers
     const res8a = await apiCall('/health', 'GET');
@@ -467,14 +600,22 @@ async function runSecurityTestSuite() {
     const csp = res8a.headers.get('content-security-policy');
 
     assert(xFrameOptions === 'DENY', `X-Frame-Options is DENY (Actual: ${xFrameOptions})`);
-    assert(xContentTypeOptions === 'nosniff', `X-Content-Type-Options is nosniff (Actual: ${xContentTypeOptions})`);
+    assert(
+      xContentTypeOptions === 'nosniff',
+      `X-Content-Type-Options is nosniff (Actual: ${xContentTypeOptions})`
+    );
     assert(Boolean(csp), 'Content-Security-Policy header is present');
 
     // Verify CORS rejection on untrusted origin
-    const res8b = await apiCall('/health', 'GET', null, null, { Origin: 'http://evil-attacker-site.com' });
+    const res8b = await apiCall('/health', 'GET', null, null, {
+      Origin: 'http://evil-attacker-site.com',
+    });
     // In express cors, an origin rejection either throws an error (returning 500/CORS error) or omits Access-Control-Allow-Origin
     const acao = res8b.headers.get('access-control-allow-origin');
-    assert(acao !== 'http://evil-attacker-site.com', 'CORS restricts access: untrusted origin not allowed');
+    assert(
+      acao !== 'http://evil-attacker-site.com',
+      'CORS restricts access: untrusted origin not allowed'
+    );
 
     // Verify passwordHash is never returned in /auth/me or /users/profile
     const res8c = await apiCall('/auth/me', 'GET', null, testTokens.userA);
@@ -494,7 +635,10 @@ async function runSecurityTestSuite() {
       email: `weak1_${timestamp}@test.sec`,
       password: 'password123!',
     });
-    assert(res9a.status === 400 || res9a.status === 422, 'Password without uppercase letter rejected with validation error');
+    assert(
+      res9a.status === 400 || res9a.status === 422,
+      'Password without uppercase letter rejected with validation error'
+    );
 
     // Weak password: no number
     const res9b = await apiCall('/auth/register', 'POST', {
@@ -502,7 +646,10 @@ async function runSecurityTestSuite() {
       email: `weak2_${timestamp}@test.sec`,
       password: 'Password!',
     });
-    assert(res9b.status === 400 || res9b.status === 422, 'Password without numeric digit rejected with validation error');
+    assert(
+      res9b.status === 400 || res9b.status === 422,
+      'Password without numeric digit rejected with validation error'
+    );
 
     // Weak password: no special character
     const res9c = await apiCall('/auth/register', 'POST', {
@@ -510,7 +657,10 @@ async function runSecurityTestSuite() {
       email: `weak3_${timestamp}@test.sec`,
       password: 'Password123',
     });
-    assert(res9c.status === 400 || res9c.status === 422, 'Password without special character rejected with validation error');
+    assert(
+      res9c.status === 400 || res9c.status === 422,
+      'Password without special character rejected with validation error'
+    );
 
     // Weak password: too short (<8)
     const res9d = await apiCall('/auth/register', 'POST', {
@@ -518,14 +668,21 @@ async function runSecurityTestSuite() {
       email: `weak4_${timestamp}@test.sec`,
       password: 'P1!',
     });
-    assert(res9d.status === 400 || res9d.status === 422, 'Password shorter than 8 characters rejected with validation error');
+    assert(
+      res9d.status === 400 || res9d.status === 422,
+      'Password shorter than 8 characters rejected with validation error'
+    );
 
     // =========================================================================
     // 10. ATTACK VECTOR: REPEATED LOGIN ATTEMPTS (BRUTE-FORCE RATE LIMITING)
     // =========================================================================
-    console.log(`\n${colors.bold}10. Attack Vector: Repeated Login Attempts (Brute-Force Rate Limiting)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}10. Attack Vector: Repeated Login Attempts (Brute-Force Rate Limiting)${colors.reset}`
+    );
 
-    console.log(`  Executing rapid repeated login attempts to trigger rate limit (threshold: 20)...`);
+    console.log(
+      `  Executing rapid repeated login attempts to trigger rate limit (threshold: 20)...`
+    );
     let hit429 = false;
     let attemptsCount = 0;
     const attackerIp = `198.51.100.${Math.floor(Math.random() * 200) + 10}`;
@@ -552,7 +709,10 @@ async function runSecurityTestSuite() {
       }
     }
 
-    assert(hit429, `Repeated login brute-force triggered 429 Too Many Requests (Triggered on attempt #${attemptsCount})`);
+    assert(
+      hit429,
+      `Repeated login brute-force triggered 429 Too Many Requests (Triggered on attempt #${attemptsCount})`
+    );
   } catch (err) {
     console.error(`${colors.red}Critical test runner exception:${colors.reset}`, err);
     failedTests++;
@@ -566,7 +726,8 @@ async function runSecurityTestSuite() {
       if (testFixtures.assetUserA) await Asset.findByIdAndDelete(testFixtures.assetUserA._id);
       if (testFixtures.reportUserA) await Report.findByIdAndDelete(testFixtures.reportUserA._id);
       if (testFixtures.kycUserA) await KYCRecord.findByIdAndDelete(testFixtures.kycUserA._id);
-      if (testFixtures.transactionUserA) await Transaction.findByIdAndDelete(testFixtures.transactionUserA._id);
+      if (testFixtures.transactionUserA)
+        await Transaction.findByIdAndDelete(testFixtures.transactionUserA._id);
       console.log(`${colors.green}✔ Fixtures cleaned up.${colors.reset}`);
     } catch (cleanupErr) {
       console.error('Error during cleanup:', cleanupErr);
@@ -575,9 +736,15 @@ async function runSecurityTestSuite() {
     await mongoose.disconnect();
     console.log(`Disconnected from MongoDB\n`);
 
-    console.log(`${colors.bold}${colors.blue}======================================================================${colors.reset}`);
-    console.log(`  ${colors.bold}SECURITY TEST RESULTS:${colors.reset} ${colors.green}${passedTests} passed${colors.reset}, ${failedTests > 0 ? `${colors.red}${failedTests} failed${colors.reset}` : `0 failed`}`);
-    console.log(`${colors.bold}${colors.blue}======================================================================${colors.reset}\n`);
+    console.log(
+      `${colors.bold}${colors.blue}======================================================================${colors.reset}`
+    );
+    console.log(
+      `  ${colors.bold}SECURITY TEST RESULTS:${colors.reset} ${colors.green}${passedTests} passed${colors.reset}, ${failedTests > 0 ? `${colors.red}${failedTests} failed${colors.reset}` : `0 failed`}`
+    );
+    console.log(
+      `${colors.bold}${colors.blue}======================================================================${colors.reset}\n`
+    );
 
     if (failedTests > 0) {
       process.exit(1);

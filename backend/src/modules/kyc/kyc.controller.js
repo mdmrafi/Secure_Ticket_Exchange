@@ -27,11 +27,7 @@ export class KYCController {
     const clientContext = this.getClientContext(req);
     const result = await this.service.startKYC(userId, req.body, clientContext);
 
-    return ApiResponse.created(
-      res,
-      result,
-      'Identity verification session started successfully'
-    );
+    return ApiResponse.created(res, result, 'Identity verification session started successfully');
   });
 
   /**
@@ -47,8 +43,8 @@ export class KYCController {
       result.status === 'VERIFIED'
         ? 'Identity verification completed successfully'
         : result.status === 'REJECTED'
-        ? 'Identity verification was rejected'
-        : 'Identity verification is pending or in review';
+          ? 'Identity verification was rejected'
+          : 'Identity verification is pending or in review';
 
     return ApiResponse.success(res, result, message, HttpStatus.OK);
   });
@@ -61,11 +57,7 @@ export class KYCController {
     const userId = req.user.userId;
     const result = await this.service.getKYCStatus(userId);
 
-    return ApiResponse.success(
-      res,
-      result,
-      'KYC verification status retrieved successfully'
-    );
+    return ApiResponse.success(res, result, 'KYC verification status retrieved successfully');
   });
 
   /**
@@ -77,11 +69,7 @@ export class KYCController {
     const targetUserId = req.params.userId;
     const result = await this.service.getKYCRecordByUserIdWithAuth(req.user, targetUserId);
 
-    return ApiResponse.success(
-      res,
-      result,
-      'KYC status retrieved successfully'
-    );
+    return ApiResponse.success(res, result, 'KYC status retrieved successfully');
   });
 }
 

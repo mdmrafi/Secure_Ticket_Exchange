@@ -43,11 +43,19 @@ export const queryListingsSchema = z.object({
     source: z.string().optional(),
     destination: z.string().optional(),
     date: z.string().optional(),
-    minPrice: z.string().regex(/^\d+(\.\d+)?$/, 'minPrice must be a valid number').optional(),
-    maxPrice: z.string().regex(/^\d+(\.\d+)?$/, 'maxPrice must be a valid number').optional(),
+    minPrice: z
+      .string()
+      .regex(/^\d+(\.\d+)?$/, 'minPrice must be a valid number')
+      .optional(),
+    maxPrice: z
+      .string()
+      .regex(/^\d+(\.\d+)?$/, 'maxPrice must be a valid number')
+      .optional(),
     verificationStatus: z.string().optional(),
     status: z.string().optional(),
-    sortBy: z.enum(['price', 'askingPrice', 'createdAt', 'expiresAt', 'date', 'journeyDate']).optional(),
+    sortBy: z
+      .enum(['price', 'askingPrice', 'createdAt', 'expiresAt', 'date', 'journeyDate'])
+      .optional(),
     sortOrder: z.enum(['asc', 'desc', 'ASC', 'DESC']).optional(),
   }),
 });
@@ -80,4 +88,3 @@ export const releaseListingSchema = z.object({
     })
     .optional(),
 });
-

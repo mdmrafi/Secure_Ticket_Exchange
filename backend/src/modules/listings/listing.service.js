@@ -100,7 +100,9 @@ export class ListingService {
     }
 
     // 3. Rule: only asset owner can list
-    const assetOwnerId = asset.ownerId?._id ? asset.ownerId._id.toString() : asset.ownerId.toString();
+    const assetOwnerId = asset.ownerId?._id
+      ? asset.ownerId._id.toString()
+      : asset.ownerId.toString();
     if (assetOwnerId !== sellerId.toString()) {
       throw new ForbiddenError('You can only list assets that you own');
     }
@@ -130,7 +132,9 @@ export class ListingService {
 
     // Check transferability
     if (asset.isTransferable === false) {
-      throw new BadRequestError('Asset is non-transferable and cannot be listed on the marketplace');
+      throw new BadRequestError(
+        'Asset is non-transferable and cannot be listed on the marketplace'
+      );
     }
 
     // 6. Rule: same asset cannot have multiple active listings
@@ -140,7 +144,9 @@ export class ListingService {
     });
 
     if (existingActiveListing) {
-      throw new ConflictError('This asset already has an active or reserved listing on the marketplace');
+      throw new ConflictError(
+        'This asset already has an active or reserved listing on the marketplace'
+      );
     }
 
     // Validate expiration date if provided
@@ -294,9 +300,15 @@ export class ListingService {
       throw new BadRequestError('Cannot modify a listing that has expired');
     }
 
-    if (listing.status === ListingStatus.RESERVED && updateData.status && updateData.status !== ListingStatus.RESERVED) {
+    if (
+      listing.status === ListingStatus.RESERVED &&
+      updateData.status &&
+      updateData.status !== ListingStatus.RESERVED
+    ) {
       if (!isAdmin) {
-        throw new BadRequestError('Cannot modify a listing while an active escrow transaction is pending');
+        throw new BadRequestError(
+          'Cannot modify a listing while an active escrow transaction is pending'
+        );
       }
     }
 
@@ -495,10 +507,7 @@ export class ListingService {
           const updatedListing = await Listing.findOneAndUpdate(
             {
               _id: listingId,
-              $or: [
-                { status: ListingStatus.ACTIVE },
-                { status: ListingStatus.RESERVED },
-              ],
+              $or: [{ status: ListingStatus.ACTIVE }, { status: ListingStatus.RESERVED }],
             },
             { $set: { status: ListingStatus.RESERVED } },
             { new: true, session }

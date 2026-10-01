@@ -10,7 +10,13 @@ export class NotificationController {
 
   getMyNotifications = asyncHandler(async (req, res) => {
     const result = await this.service.getUserNotifications(req.user.userId, req.query);
-    return ApiResponse.success(res, result.notifications, 'Notifications retrieved', 200, result.pagination);
+    return ApiResponse.success(
+      res,
+      result.notifications,
+      'Notifications retrieved',
+      200,
+      result.pagination
+    );
   });
 
   markAsRead = asyncHandler(async (req, res) => {

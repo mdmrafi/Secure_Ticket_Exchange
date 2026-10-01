@@ -31,7 +31,8 @@ export const EscrowDashboardPage = () => {
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-white">Escrow & Exchange Orders</h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">
-          Zero-trust financial escrow guarantees buyer receives valid ticket and seller receives verified payment.
+          Zero-trust financial escrow guarantees buyer receives valid ticket and seller receives
+          verified payment.
         </p>
       </div>
 
@@ -117,8 +118,12 @@ export const EscrowDashboardPage = () => {
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 text-xs text-slate-400">
               <div className="flex items-center gap-4">
-                <span>Buyer: <strong className="text-slate-200">{tx.buyer}</strong></span>
-                <span>Seller: <strong className="text-slate-200">{tx.seller}</strong></span>
+                <span>
+                  Buyer: <strong className="text-slate-200">{tx.buyer}</strong>
+                </span>
+                <span>
+                  Seller: <strong className="text-slate-200">{tx.seller}</strong>
+                </span>
                 <span className="text-slate-500">{tx.timestamp}</span>
               </div>
 

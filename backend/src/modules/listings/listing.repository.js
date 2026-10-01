@@ -102,8 +102,10 @@ export class ListingRepository {
     }
 
     // Price range filtering on askingPrice
-    const minPrice = query.minPrice !== undefined && query.minPrice !== '' ? Number(query.minPrice) : null;
-    const maxPrice = query.maxPrice !== undefined && query.maxPrice !== '' ? Number(query.maxPrice) : null;
+    const minPrice =
+      query.minPrice !== undefined && query.minPrice !== '' ? Number(query.minPrice) : null;
+    const maxPrice =
+      query.maxPrice !== undefined && query.maxPrice !== '' ? Number(query.maxPrice) : null;
 
     if (minPrice !== null || maxPrice !== null) {
       listingMatch.askingPrice = {};

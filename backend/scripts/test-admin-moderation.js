@@ -89,12 +89,16 @@ async function apiCall(endpoint, method = 'GET', body = null, token = null) {
 
 async function runTestSuite() {
   console.log('\n' + '='.repeat(70));
-  console.log(`${colors.cyan}${colors.bold}  ADMINISTRATIVE MODERATION SYSTEM & RBAC TEST SUITE${colors.reset}`);
+  console.log(
+    `${colors.cyan}${colors.bold}  ADMINISTRATIVE MODERATION SYSTEM & RBAC TEST SUITE${colors.reset}`
+  );
   console.log('='.repeat(70) + '\n');
 
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/secure_asset_exchange';
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
-  console.log(`${colors.blue}ℹ Connected to MongoDB Atlas for moderation test fixtures${colors.reset}\n`);
+  console.log(
+    `${colors.blue}ℹ Connected to MongoDB Atlas for moderation test fixtures${colors.reset}\n`
+  );
 
   const runId = Date.now();
 
@@ -242,12 +246,17 @@ async function runTestSuite() {
     // =========================================================================
     // SECTION 1: Admin Dashboard APIs (All 8 Resource Queries)
     // =========================================================================
-    console.log(`${colors.yellow}${colors.bold}1. Admin Dashboard APIs (Observability & Queries)${colors.reset}`);
+    console.log(
+      `${colors.yellow}${colors.bold}1. Admin Dashboard APIs (Observability & Queries)${colors.reset}`
+    );
 
     // Overview Metrics
     const metricsRes = await apiCall('/admin/metrics', 'GET', null, adminToken);
     assert(metricsRes.status === 200, 'GET /admin/metrics returns 200 OK');
-    assert(typeof metricsRes.body?.data?.totalUsers === 'number', 'Metrics contain totalUsers count');
+    assert(
+      typeof metricsRes.body?.data?.totalUsers === 'number',
+      'Metrics contain totalUsers count'
+    );
 
     // 1. Users
     const usersRes = await apiCall('/admin/users?limit=10', 'GET', null, adminToken);
@@ -255,7 +264,10 @@ async function runTestSuite() {
     assert(Array.isArray(usersRes.body?.data?.items), 'Users returned as paginated items array');
     const userDetailRes = await apiCall(`/admin/users/${regularUser._id}`, 'GET', null, adminToken);
     assert(userDetailRes.status === 200, 'GET /admin/users/:id returns user details');
-    assert(userDetailRes.body?.data?.activity !== undefined, 'User details include activity summary');
+    assert(
+      userDetailRes.body?.data?.activity !== undefined,
+      'User details include activity summary'
+    );
 
     // 2. KYC Reviews
     const kycRes = await apiCall('/admin/kyc?limit=10', 'GET', null, adminToken);
@@ -275,29 +287,52 @@ async function runTestSuite() {
     const listingsRes = await apiCall('/admin/listings?limit=10', 'GET', null, adminToken);
     assert(listingsRes.status === 200, 'GET /admin/listings returns 200 OK');
     assert(Array.isArray(listingsRes.body?.data?.items), 'Listings returned as paginated items');
-    const listingDetailRes = await apiCall(`/admin/listings/${testListing._id}`, 'GET', null, adminToken);
+    const listingDetailRes = await apiCall(
+      `/admin/listings/${testListing._id}`,
+      'GET',
+      null,
+      adminToken
+    );
     assert(listingDetailRes.status === 200, 'GET /admin/listings/:id returns listing details');
 
     // 5. Transactions
     const txRes = await apiCall('/admin/transactions?limit=10', 'GET', null, adminToken);
     assert(txRes.status === 200, 'GET /admin/transactions returns 200 OK');
     assert(Array.isArray(txRes.body?.data?.items), 'Transactions returned as paginated items');
-    const txDetailRes = await apiCall(`/admin/transactions/${testTransaction._id}`, 'GET', null, adminToken);
+    const txDetailRes = await apiCall(
+      `/admin/transactions/${testTransaction._id}`,
+      'GET',
+      null,
+      adminToken
+    );
     assert(txDetailRes.status === 200, 'GET /admin/transactions/:id returns transaction details');
 
     // 6. Reports
     const reportsRes = await apiCall('/admin/reports?limit=10', 'GET', null, adminToken);
     assert(reportsRes.status === 200, 'GET /admin/reports returns 200 OK');
     assert(Array.isArray(reportsRes.body?.data?.items), 'Reports returned as paginated items');
-    const reportDetailRes = await apiCall(`/admin/reports/${testReport._id}`, 'GET', null, adminToken);
+    const reportDetailRes = await apiCall(
+      `/admin/reports/${testReport._id}`,
+      'GET',
+      null,
+      adminToken
+    );
     assert(reportDetailRes.status === 200, 'GET /admin/reports/:id returns report details');
 
     // 7. Fraud Alerts
     const fraudRes = await apiCall('/admin/fraud-alerts?limit=10', 'GET', null, adminToken);
     assert(fraudRes.status === 200, 'GET /admin/fraud-alerts returns 200 OK');
     assert(Array.isArray(fraudRes.body?.data?.items), 'Fraud alerts returned as paginated items');
-    const fraudDetailRes = await apiCall(`/admin/fraud-alerts/${testFraud._id}`, 'GET', null, adminToken);
-    assert(fraudDetailRes.status === 200, 'GET /admin/fraud-alerts/:id returns fraud alert details');
+    const fraudDetailRes = await apiCall(
+      `/admin/fraud-alerts/${testFraud._id}`,
+      'GET',
+      null,
+      adminToken
+    );
+    assert(
+      fraudDetailRes.status === 200,
+      'GET /admin/fraud-alerts/:id returns fraud alert details'
+    );
 
     // 8. Audit Logs
     const auditRes = await apiCall('/admin/audit-logs?limit=10', 'GET', null, adminToken);
@@ -311,7 +346,9 @@ async function runTestSuite() {
     // =========================================================================
     // SECTION 2: Admin Actions & Immutable Audit Event Verification (All 7 Actions)
     // =========================================================================
-    console.log(`\n${colors.yellow}${colors.bold}2. Administrative Actions & Immutable Audit Events${colors.reset}`);
+    console.log(
+      `\n${colors.yellow}${colors.bold}2. Administrative Actions & Immutable Audit Events${colors.reset}`
+    );
 
     // Action 1: Suspend User (ADMIN)
     console.log(`  ${colors.cyan}Action 1: Suspend User...${colors.reset}`);
@@ -324,9 +361,15 @@ async function runTestSuite() {
     );
     assert(suspendRes.status === 200, 'ADMIN suspend user returns 200 OK');
     const suspendedUserDoc = await User.findById(sellerUser._id);
-    assert(suspendedUserDoc.accountStatus === 'SUSPENDED', 'Target user accountStatus transitioned to SUSPENDED');
+    assert(
+      suspendedUserDoc.accountStatus === 'SUSPENDED',
+      'Target user accountStatus transitioned to SUSPENDED'
+    );
     const suspendedUserListing = await Listing.findById(testListing._id);
-    assert(suspendedUserListing.status === ListingStatus.SUSPENDED, 'User listings automatically suspended');
+    assert(
+      suspendedUserListing.status === ListingStatus.SUSPENDED,
+      'User listings automatically suspended'
+    );
 
     // Verify immutable audit log created for suspension
     const suspendAudit = await AuditLog.findOne({
@@ -335,7 +378,10 @@ async function runTestSuite() {
     });
     assert(suspendAudit !== null, 'Immutable audit log created for user suspension');
     assert(suspendAudit?.actorRole === 'ADMIN', 'Audit log records actorRole as ADMIN');
-    assert(suspendAudit?.data?.reason === suspendReason, 'Audit log records exact suspension reason');
+    assert(
+      suspendAudit?.data?.reason === suspendReason,
+      'Audit log records exact suspension reason'
+    );
 
     // Action 2: Unsuspend User (ADMIN)
     console.log(`  ${colors.cyan}Action 2: Unsuspend User...${colors.reset}`);
@@ -348,7 +394,10 @@ async function runTestSuite() {
     );
     assert(unsuspendRes.status === 200, 'ADMIN unsuspend user returns 200 OK');
     const unsuspendedUserDoc = await User.findById(sellerUser._id);
-    assert(unsuspendedUserDoc.accountStatus === 'ACTIVE', 'Target user accountStatus restored to ACTIVE');
+    assert(
+      unsuspendedUserDoc.accountStatus === 'ACTIVE',
+      'Target user accountStatus restored to ACTIVE'
+    );
 
     // Verify immutable audit log created for unsuspension
     const unsuspendAudit = await AuditLog.findOne({
@@ -356,7 +405,10 @@ async function runTestSuite() {
       entityId: sellerUser._id.toString(),
     });
     assert(unsuspendAudit !== null, 'Immutable audit log created for user unsuspension');
-    assert(unsuspendAudit?.data?.reason === unsuspendReason, 'Audit log records exact unsuspension reason');
+    assert(
+      unsuspendAudit?.data?.reason === unsuspendReason,
+      'Audit log records exact unsuspension reason'
+    );
 
     // Action 3: Suspend Listing (MODERATOR or ADMIN)
     console.log(`  ${colors.cyan}Action 3: Suspend Listing (by Moderator)...${colors.reset}`);
@@ -371,7 +423,10 @@ async function runTestSuite() {
     );
     assert(suspendListingRes.status === 200, 'MODERATOR suspend listing returns 200 OK');
     const reloadedListing = await Listing.findById(testListing._id);
-    assert(reloadedListing.status === ListingStatus.SUSPENDED, 'Listing status transitioned to SUSPENDED');
+    assert(
+      reloadedListing.status === ListingStatus.SUSPENDED,
+      'Listing status transitioned to SUSPENDED'
+    );
 
     // Verify immutable audit log for listing suspension
     const listingAudit = await AuditLog.findOne({
@@ -380,10 +435,15 @@ async function runTestSuite() {
     });
     assert(listingAudit !== null, 'Immutable audit log created for listing suspension');
     assert(listingAudit?.actorRole === 'MODERATOR', 'Audit log records actorRole as MODERATOR');
-    assert(listingAudit?.data?.reason === listingSuspendReason, 'Audit log records listing suspension reason');
+    assert(
+      listingAudit?.data?.reason === listingSuspendReason,
+      'Audit log records listing suspension reason'
+    );
 
     // Action 4: Approve Manual Verification (MODERATOR or ADMIN)
-    console.log(`  ${colors.cyan}Action 4: Approve Manual Verification (by Moderator)...${colors.reset}`);
+    console.log(
+      `  ${colors.cyan}Action 4: Approve Manual Verification (by Moderator)...${colors.reset}`
+    );
     const approveNotes = 'Verified physical ticket with authentic watermark';
     const approveVerifRes = await apiCall(
       `/admin/verification/${testVerification._id}/approve`,
@@ -394,8 +454,14 @@ async function runTestSuite() {
     assert(approveVerifRes.status === 200, 'MODERATOR approve verification returns 200 OK');
     const approvedVerifDoc = await Verification.findById(testVerification._id);
     const approvedAssetDoc = await Asset.findById(testAsset._id);
-    assert(approvedVerifDoc.status === VerificationStatus.VERIFIED, 'Verification status transitioned to VERIFIED');
-    assert(approvedAssetDoc.status === AssetStatus.VERIFIED, 'Associated Asset status transitioned to VERIFIED');
+    assert(
+      approvedVerifDoc.status === VerificationStatus.VERIFIED,
+      'Verification status transitioned to VERIFIED'
+    );
+    assert(
+      approvedAssetDoc.status === AssetStatus.VERIFIED,
+      'Associated Asset status transitioned to VERIFIED'
+    );
 
     // Verify immutable audit log for approval
     const approveAudit = await AuditLog.findOne({
@@ -403,7 +469,10 @@ async function runTestSuite() {
       entityId: testVerification._id.toString(),
     });
     assert(approveAudit !== null, 'Immutable audit log created for verification approval');
-    assert(approveAudit?.data?.confidenceScore === 98, 'Audit log records verification confidence score');
+    assert(
+      approveAudit?.data?.confidenceScore === 98,
+      'Audit log records verification confidence score'
+    );
 
     // Action 5: Reject Verification (MODERATOR or ADMIN)
     console.log(`  ${colors.cyan}Action 5: Reject Verification (by Moderator)...${colors.reset}`);
@@ -424,8 +493,14 @@ async function runTestSuite() {
     assert(rejectVerifRes.status === 200, 'MODERATOR reject verification returns 200 OK');
     const rejectedVerifDoc = await Verification.findById(secondVerif._id);
     const rejectedAssetDoc = await Asset.findById(testAsset._id);
-    assert(rejectedVerifDoc.status === VerificationStatus.FAILED, 'Verification status transitioned to FAILED');
-    assert(rejectedAssetDoc.status === AssetStatus.REJECTED, 'Asset status transitioned to REJECTED');
+    assert(
+      rejectedVerifDoc.status === VerificationStatus.FAILED,
+      'Verification status transitioned to FAILED'
+    );
+    assert(
+      rejectedAssetDoc.status === AssetStatus.REJECTED,
+      'Asset status transitioned to REJECTED'
+    );
 
     // Verify immutable audit log for rejection
     const rejectAudit = await AuditLog.findOne({
@@ -468,9 +543,15 @@ async function runTestSuite() {
     );
     assert(freezeRes.status === 200, 'ADMIN freeze transaction returns 200 OK');
     const frozenTxDoc = await Transaction.findById(testTransaction._id);
-    assert(frozenTxDoc.transactionStatus === TransactionStatus.DISPUTED, 'Transaction status transitioned to DISPUTED');
+    assert(
+      frozenTxDoc.transactionStatus === TransactionStatus.DISPUTED,
+      'Transaction status transitioned to DISPUTED'
+    );
     assert(frozenTxDoc.escrowStatus === 'HELD', 'Escrow funds secured and status set to HELD');
-    assert(frozenTxDoc.disputeReason.includes(freezeReason), 'Dispute reason stored in transaction record');
+    assert(
+      frozenTxDoc.disputeReason.includes(freezeReason),
+      'Dispute reason stored in transaction record'
+    );
 
     // Verify immutable audit log for transaction freeze
     const freezeAudit = await AuditLog.findOne({
@@ -484,7 +565,9 @@ async function runTestSuite() {
     // =========================================================================
     // SECTION 3: Role-Based Permissions & Privilege Escalation Tests
     // =========================================================================
-    console.log(`\n${colors.yellow}${colors.bold}3. Role-Based Permissions & Privilege Escalation Tests${colors.reset}`);
+    console.log(
+      `\n${colors.yellow}${colors.bold}3. Role-Based Permissions & Privilege Escalation Tests${colors.reset}`
+    );
 
     // Privilege Escalation Test 1: Unauthenticated request to /admin
     const noAuthRes = await apiCall('/admin/metrics', 'GET', null, null);
@@ -492,13 +575,19 @@ async function runTestSuite() {
 
     // Privilege Escalation Test 2: Regular USER attempting to access Admin Dashboard
     const userMetricsRes = await apiCall('/admin/metrics', 'GET', null, userToken);
-    assert(userMetricsRes.status === 403, 'USER accessing /admin/metrics blocked with 403 Forbidden');
+    assert(
+      userMetricsRes.status === 403,
+      'USER accessing /admin/metrics blocked with 403 Forbidden'
+    );
 
     const userUsersRes = await apiCall('/admin/users', 'GET', null, userToken);
     assert(userUsersRes.status === 403, 'USER accessing /admin/users blocked with 403 Forbidden');
 
     const userAuditRes = await apiCall('/admin/audit-logs', 'GET', null, userToken);
-    assert(userAuditRes.status === 403, 'USER accessing /admin/audit-logs blocked with 403 Forbidden');
+    assert(
+      userAuditRes.status === 403,
+      'USER accessing /admin/audit-logs blocked with 403 Forbidden'
+    );
 
     // Privilege Escalation Test 3: Regular USER attempting Moderation Actions
     const userSuspendListingRes = await apiCall(
@@ -507,7 +596,10 @@ async function runTestSuite() {
       { reason: 'User attempt' },
       userToken
     );
-    assert(userSuspendListingRes.status === 403, 'USER attempting to suspend listing blocked with 403 Forbidden');
+    assert(
+      userSuspendListingRes.status === 403,
+      'USER attempting to suspend listing blocked with 403 Forbidden'
+    );
 
     const userSuspendUserRes = await apiCall(
       `/admin/users/${sellerUser._id}/suspend`,
@@ -515,7 +607,10 @@ async function runTestSuite() {
       { reason: 'User attempt' },
       userToken
     );
-    assert(userSuspendUserRes.status === 403, 'USER attempting to suspend user blocked with 403 Forbidden');
+    assert(
+      userSuspendUserRes.status === 403,
+      'USER attempting to suspend user blocked with 403 Forbidden'
+    );
 
     const userFreezeTxRes = await apiCall(
       `/admin/transactions/${testTransaction._id}/freeze`,
@@ -523,7 +618,10 @@ async function runTestSuite() {
       { reason: 'User attempt' },
       userToken
     );
-    assert(userFreezeTxRes.status === 403, 'USER attempting to freeze transaction blocked with 403 Forbidden');
+    assert(
+      userFreezeTxRes.status === 403,
+      'USER attempting to freeze transaction blocked with 403 Forbidden'
+    );
 
     // Privilege Escalation Test 4: MODERATOR attempting ADMIN-ONLY actions
     // Moderator must NOT be able to suspend user accounts
@@ -533,7 +631,10 @@ async function runTestSuite() {
       { reason: 'Moderator escalation attempt' },
       modToken
     );
-    assert(modSuspendUserRes.status === 403, 'MODERATOR attempting to suspend user blocked with 403 Forbidden');
+    assert(
+      modSuspendUserRes.status === 403,
+      'MODERATOR attempting to suspend user blocked with 403 Forbidden'
+    );
 
     // Moderator must NOT be able to unsuspend user accounts
     const modUnsuspendUserRes = await apiCall(
@@ -542,7 +643,10 @@ async function runTestSuite() {
       { reason: 'Moderator escalation attempt' },
       modToken
     );
-    assert(modUnsuspendUserRes.status === 403, 'MODERATOR attempting to unsuspend user blocked with 403 Forbidden');
+    assert(
+      modUnsuspendUserRes.status === 403,
+      'MODERATOR attempting to unsuspend user blocked with 403 Forbidden'
+    );
 
     // Moderator must NOT be able to freeze financial transactions
     const modFreezeTxRes = await apiCall(
@@ -551,7 +655,10 @@ async function runTestSuite() {
       { reason: 'Moderator escalation attempt' },
       modToken
     );
-    assert(modFreezeTxRes.status === 403, 'MODERATOR attempting to freeze transaction blocked with 403 Forbidden');
+    assert(
+      modFreezeTxRes.status === 403,
+      'MODERATOR attempting to freeze transaction blocked with 403 Forbidden'
+    );
 
     // Privilege Escalation Test 5: ADMIN self-suspension guard
     const adminSelfSuspendRes = await apiCall(
@@ -560,13 +667,18 @@ async function runTestSuite() {
       { reason: 'Admin self suspend' },
       adminToken
     );
-    assert(adminSelfSuspendRes.status === 400, 'ADMIN self-suspension blocked with 400 Bad Request');
+    assert(
+      adminSelfSuspendRes.status === 400,
+      'ADMIN self-suspension blocked with 400 Bad Request'
+    );
 
     // -------------------------------------------------------------------------
     // CLEANUP
     // -------------------------------------------------------------------------
     console.log(`\n${colors.blue}Cleaning up test fixtures...${colors.reset}`);
-    await User.deleteMany({ _id: { $in: [adminUser._id, modUser._id, regularUser._id, sellerUser._id] } });
+    await User.deleteMany({
+      _id: { $in: [adminUser._id, modUser._id, regularUser._id, sellerUser._id] },
+    });
     await Asset.deleteMany({ _id: testAsset._id });
     await Listing.deleteMany({ _id: testListing._id });
     await Transaction.deleteMany({ _id: testTransaction._id });

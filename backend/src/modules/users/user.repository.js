@@ -23,10 +23,7 @@ export class UserRepository {
 
   async list(filter = {}, pagination = { skip: 0, limit: 20 }) {
     const [items, total] = await Promise.all([
-      User.find(filter)
-        .skip(pagination.skip)
-        .limit(pagination.limit)
-        .sort({ createdAt: -1 }),
+      User.find(filter).skip(pagination.skip).limit(pagination.limit).sort({ createdAt: -1 }),
       User.countDocuments(filter),
     ]);
 

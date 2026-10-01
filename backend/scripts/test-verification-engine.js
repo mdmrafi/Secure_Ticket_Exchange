@@ -75,14 +75,18 @@ function assert(condition, testName, details = '') {
 function createDummyTicketFile(filename) {
   const filePath = path.join(TICKET_UPLOAD_DIR, filename);
   // PNG Magic bytes
-  const header = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
+  const header = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+  ]);
   const content = Buffer.from('TICKET_DUMMY_BINARY_DATA', 'utf8');
   fs.writeFileSync(filePath, Buffer.concat([header, content]));
   return filePath;
 }
 
 async function runTests() {
-  console.log(`\n${colors.bold}${colors.cyan}======================================================`);
+  console.log(
+    `\n${colors.bold}${colors.cyan}======================================================`
+  );
   console.log(`   MULTI-LAYER RAILWAY VERIFICATION ENGINE TEST SUITE`);
   console.log(`======================================================${colors.reset}\n`);
   console.log(`Target API URL: ${BASE_URL}\n`);
@@ -161,27 +165,53 @@ async function runTests() {
     assert(validRes.status === 200, 'POST /verification/railway/:id returns 200 OK');
     assert(validRes.body?.data?.status === 'VERIFIED', 'Verification status is VERIFIED');
     assert(validRes.body?.data?.isVerified === true, 'isVerified flag is true');
-    assert(validRes.body?.data?.overallConfidenceScore >= 80, `Confidence score is high (${validRes.body?.data?.overallConfidenceScore}%)`);
+    assert(
+      validRes.body?.data?.overallConfidenceScore >= 80,
+      `Confidence score is high (${validRes.body?.data?.overallConfidenceScore}%)`
+    );
 
     // Verify all 6 check layers are reported
     const checks = validRes.body?.data?.checks || [];
     assert(checks.length >= 6, 'Verification result explains all check layers');
-    assert(checks.find((c) => c.layer === 'DOCUMENT_VALIDATION')?.status === 'PASSED', 'DOCUMENT_VALIDATION passed');
-    assert(checks.find((c) => c.layer === 'OCR_CONSISTENCY')?.status === 'PASSED', 'OCR_CONSISTENCY passed');
-    assert(checks.find((c) => c.layer === 'TICKET_FORMAT')?.status === 'PASSED', 'TICKET_FORMAT passed');
-    assert(checks.find((c) => c.layer === 'DUPLICATE_DETECTION')?.status === 'PASSED', 'DUPLICATE_DETECTION passed');
-    assert(checks.find((c) => c.layer === 'RAILWAY_PROVIDER')?.status === 'PASSED', 'RAILWAY_PROVIDER passed');
-    assert(checks.find((c) => c.layer === 'MANUAL_REVIEW_FALLBACK')?.status === 'NOT_NEEDED', 'MANUAL_REVIEW_FALLBACK is NOT_NEEDED');
+    assert(
+      checks.find((c) => c.layer === 'DOCUMENT_VALIDATION')?.status === 'PASSED',
+      'DOCUMENT_VALIDATION passed'
+    );
+    assert(
+      checks.find((c) => c.layer === 'OCR_CONSISTENCY')?.status === 'PASSED',
+      'OCR_CONSISTENCY passed'
+    );
+    assert(
+      checks.find((c) => c.layer === 'TICKET_FORMAT')?.status === 'PASSED',
+      'TICKET_FORMAT passed'
+    );
+    assert(
+      checks.find((c) => c.layer === 'DUPLICATE_DETECTION')?.status === 'PASSED',
+      'DUPLICATE_DETECTION passed'
+    );
+    assert(
+      checks.find((c) => c.layer === 'RAILWAY_PROVIDER')?.status === 'PASSED',
+      'RAILWAY_PROVIDER passed'
+    );
+    assert(
+      checks.find((c) => c.layer === 'MANUAL_REVIEW_FALLBACK')?.status === 'NOT_NEEDED',
+      'MANUAL_REVIEW_FALLBACK is NOT_NEEDED'
+    );
 
     // Verify DB Asset state updated
     const updatedValidAsset = await Asset.findById(validAsset._id);
-    assert(updatedValidAsset.verificationStatus === 'VERIFIED', 'Asset verificationStatus is VERIFIED');
+    assert(
+      updatedValidAsset.verificationStatus === 'VERIFIED',
+      'Asset verificationStatus is VERIFIED'
+    );
     assert(updatedValidAsset.status === 'VERIFIED', 'Asset status transitioned to VERIFIED');
 
     // -----------------------------------------------------------------
     // TEST 2: Nonexistent Ticket in Railway Registry
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 2: Nonexistent Ticket in Railway Registry${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 2: Nonexistent Ticket in Railway Registry${colors.reset}`
+    );
     const nonExistFile = createDummyTicketFile(`nonexist_ticket_${timestamp}.png`);
     createdFiles.push(nonExistFile);
 
@@ -205,13 +235,25 @@ async function runTests() {
       },
     });
 
-    const nonExistRes = await apiCall(`/verification/railway/${nonExistAsset._id}`, 'POST', {}, tokenA);
-    assert(nonExistRes.status === 200, 'POST /verification/railway returns 200 with failure verdict');
+    const nonExistRes = await apiCall(
+      `/verification/railway/${nonExistAsset._id}`,
+      'POST',
+      {},
+      tokenA
+    );
+    assert(
+      nonExistRes.status === 200,
+      'POST /verification/railway returns 200 with failure verdict'
+    );
     assert(nonExistRes.body?.data?.status === 'FAILED', 'Verification status is FAILED');
     assert(nonExistRes.body?.data?.isVerified === false, 'isVerified is false');
-    assert(nonExistRes.body?.data?.providerResponse?.ticketExists === false, 'providerResponse reports ticketExists: false');
     assert(
-      nonExistRes.body?.data?.checks?.find((c) => c.layer === 'RAILWAY_PROVIDER')?.status === 'FAILED',
+      nonExistRes.body?.data?.providerResponse?.ticketExists === false,
+      'providerResponse reports ticketExists: false'
+    );
+    assert(
+      nonExistRes.body?.data?.checks?.find((c) => c.layer === 'RAILWAY_PROVIDER')?.status ===
+        'FAILED',
       'RAILWAY_PROVIDER check marked as FAILED'
     );
 
@@ -242,9 +284,17 @@ async function runTests() {
       },
     });
 
-    const mismatchRes = await apiCall(`/verification/railway/${mismatchAsset._id}`, 'POST', {}, tokenA);
+    const mismatchRes = await apiCall(
+      `/verification/railway/${mismatchAsset._id}`,
+      'POST',
+      {},
+      tokenA
+    );
     assert(mismatchRes.body?.data?.status === 'SUSPICIOUS', 'Status marked as SUSPICIOUS');
-    assert(mismatchRes.body?.data?.providerResponse?.passengerMatch === false, 'providerResponse reports passengerMatch: false');
+    assert(
+      mismatchRes.body?.data?.providerResponse?.passengerMatch === false,
+      'providerResponse reports passengerMatch: false'
+    );
     assert(
       mismatchRes.body?.data?.fraudFlags?.some((f) => f.code === 'PASSENGER_NAME_MISMATCH'),
       'Fraud flag PASSENGER_NAME_MISMATCH recorded'
@@ -253,7 +303,9 @@ async function runTests() {
     // -----------------------------------------------------------------
     // TEST 4: Duplicate Ticket Detection
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 4: Duplicate Ticket Detection (Anti Double-Spending)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 4: Duplicate Ticket Detection (Anti Double-Spending)${colors.reset}`
+    );
     const dupFile = createDummyTicketFile(`dup_ticket_${timestamp}.png`);
     createdFiles.push(dupFile);
 
@@ -287,7 +339,8 @@ async function runTests() {
     const dupRes = await apiCall(`/verification/railway/${duplicateAsset._id}`, 'POST', {}, tokenB);
     assert(dupRes.body?.data?.status === 'SUSPICIOUS', 'Duplicate ticket marked SUSPICIOUS');
     assert(
-      dupRes.body?.data?.checks?.find((c) => c.layer === 'DUPLICATE_DETECTION')?.status === 'FAILED',
+      dupRes.body?.data?.checks?.find((c) => c.layer === 'DUPLICATE_DETECTION')?.status ===
+        'FAILED',
       'DUPLICATE_DETECTION layer failed'
     );
     assert(
@@ -318,22 +371,30 @@ async function runTests() {
       },
     });
 
-    const malformedRes = await apiCall(`/verification/railway/${malformedAsset._id}`, 'POST', {}, tokenA);
+    const malformedRes = await apiCall(
+      `/verification/railway/${malformedAsset._id}`,
+      'POST',
+      {},
+      tokenA
+    );
     assert(malformedRes.body?.data?.status === 'FAILED', 'Malformed ticket marked FAILED');
     assert(
-      malformedRes.body?.data?.checks?.find((c) => c.layer === 'TICKET_FORMAT')?.status === 'FAILED',
+      malformedRes.body?.data?.checks?.find((c) => c.layer === 'TICKET_FORMAT')?.status ===
+        'FAILED',
       'TICKET_FORMAT layer failed'
     );
     assert(
       malformedRes.body?.data?.primaryReason?.includes('format validation failed') ||
-      malformedRes.body?.data?.primaryReason?.includes('Origin and destination'),
+        malformedRes.body?.data?.primaryReason?.includes('Origin and destination'),
       'Primary reason highlights ticket format discrepancy'
     );
 
     // -----------------------------------------------------------------
     // TEST 6: Provider Failure (Graceful Fallback to Manual Review)
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 6: Railway Provider Failure / Gateway Timeout${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 6: Railway Provider Failure / Gateway Timeout${colors.reset}`
+    );
     const provFailFile = createDummyTicketFile(`prov_fail_${timestamp}.png`);
     createdFiles.push(provFailFile);
 
@@ -353,10 +414,19 @@ async function runTests() {
       },
     });
 
-    const provFailRes = await apiCall(`/verification/railway/${provFailAsset._id}`, 'POST', {}, tokenA);
-    assert(provFailRes.body?.data?.status === 'MANUAL_REVIEW', 'Provider timeout gracefully falls back to MANUAL_REVIEW');
+    const provFailRes = await apiCall(
+      `/verification/railway/${provFailAsset._id}`,
+      'POST',
+      {},
+      tokenA
+    );
     assert(
-      provFailRes.body?.data?.checks?.find((c) => c.layer === 'MANUAL_REVIEW_FALLBACK')?.status === 'ACTIVE',
+      provFailRes.body?.data?.status === 'MANUAL_REVIEW',
+      'Provider timeout gracefully falls back to MANUAL_REVIEW'
+    );
+    assert(
+      provFailRes.body?.data?.checks?.find((c) => c.layer === 'MANUAL_REVIEW_FALLBACK')?.status ===
+        'ACTIVE',
       'MANUAL_REVIEW_FALLBACK is active'
     );
     assert(
@@ -367,7 +437,9 @@ async function runTests() {
     // -----------------------------------------------------------------
     // TEST 7: Manual Review Explicit Trigger
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 7: Manual Review Trigger & Audit Recording${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 7: Manual Review Trigger & Audit Recording${colors.reset}`
+    );
     const reviewFile = createDummyTicketFile(`review_${timestamp}.png`);
     createdFiles.push(reviewFile);
 
@@ -393,11 +465,19 @@ async function runTests() {
     // Verify Verification record in database
     const dbVerification = await Verification.findOne({ assetId: reviewAsset._id });
     assert(Boolean(dbVerification), 'Verification record stored in MongoDB');
-    assert(dbVerification.status === 'MANUAL_REVIEW', 'Verification record has status MANUAL_REVIEW');
-    assert(dbVerification.checks?.length >= 5, 'Verification record contains layer breakdown in database');
+    assert(
+      dbVerification.status === 'MANUAL_REVIEW',
+      'Verification record has status MANUAL_REVIEW'
+    );
+    assert(
+      dbVerification.checks?.length >= 5,
+      'Verification record contains layer breakdown in database'
+    );
   } finally {
     // Clean up test records and files
-    console.log(`\n${colors.yellow}[CLEANUP] Cleaning up test records and mock files...${colors.reset}`);
+    console.log(
+      `\n${colors.yellow}[CLEANUP] Cleaning up test records and mock files...${colors.reset}`
+    );
     for (const f of createdFiles) {
       if (fs.existsSync(f)) {
         try {

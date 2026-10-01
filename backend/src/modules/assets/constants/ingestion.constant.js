@@ -14,12 +14,7 @@ export const ExtractionStatus = Object.freeze({
  */
 export const FileSecurityConstraints = Object.freeze({
   MAX_FILE_SIZE_BYTES: 5 * 1024 * 1024, // 5 Megabytes
-  ALLOWED_MIME_TYPES: [
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-    'application/pdf',
-  ],
+  ALLOWED_MIME_TYPES: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
   ALLOWED_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.webp', '.pdf'],
   PROHIBITED_EXTENSIONS: [
     '.exe',

@@ -30,7 +30,14 @@ function generateToken(user) {
 }
 
 // Helper: Multipart file upload caller using native Node 24 FormData & Blob
-async function uploadFile(endpoint, fileBuffer, filename, mimeType, token = null, extraFields = {}) {
+async function uploadFile(
+  endpoint,
+  fileBuffer,
+  filename,
+  mimeType,
+  token = null,
+  extraFields = {}
+) {
   const formData = new FormData();
   const blob = new Blob([fileBuffer], { type: mimeType });
   formData.append('ticket', blob, filename);
@@ -98,7 +105,9 @@ function assert(condition, testName, details = '') {
 // Helper to create valid PNG buffer
 function createValidPNGBuffer(customText = '') {
   // PNG Magic Header: 89 50 4E 47 0D 0A 1A 0A
-  const header = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
+  const header = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+  ]);
   const textPayload = Buffer.from(customText || 'SYNTHETIC_RAILWAY_TICKET_PNG_IMAGE_DATA', 'utf8');
   return Buffer.concat([header, textPayload]);
 }
@@ -107,12 +116,17 @@ function createValidPNGBuffer(customText = '') {
 function createValidPDFBuffer(customText = '') {
   // PDF Magic Header: %PDF-1.4
   const header = Buffer.from('%PDF-1.4\n%âãÏÓ\n', 'utf8');
-  const textPayload = Buffer.from(customText || 'SYNTHETIC_RAILWAY_TICKET_PDF_DOCUMENT_DATA', 'utf8');
+  const textPayload = Buffer.from(
+    customText || 'SYNTHETIC_RAILWAY_TICKET_PDF_DOCUMENT_DATA',
+    'utf8'
+  );
   return Buffer.concat([header, textPayload]);
 }
 
 async function runTests() {
-  console.log(`\n${colors.bold}${colors.cyan}======================================================`);
+  console.log(
+    `\n${colors.bold}${colors.cyan}======================================================`
+  );
   console.log(`   RAILWAY TICKET DOCUMENT INGESTION & OCR TEST SUITE`);
   console.log(`======================================================${colors.reset}\n`);
   console.log(`Target API URL: ${BASE_URL}\n`);
@@ -151,7 +165,9 @@ async function runTests() {
     // -----------------------------------------------------------------
     // TEST 1: Valid Upload (Valid Image / PDF Ingestion)
     // -----------------------------------------------------------------
-    console.log(`${colors.bold}Scenario 1: Valid Railway Ticket Upload & Ingestion (POST /assets/railway/ingest)${colors.reset}`);
+    console.log(
+      `${colors.bold}Scenario 1: Valid Railway Ticket Upload & Ingestion (POST /assets/railway/ingest)${colors.reset}`
+    );
     const validPngBuffer = createValidPNGBuffer('STANDARD_TICKET_TEST');
     const uploadRes = await uploadFile(
       '/assets/railway/ingest',
@@ -180,9 +196,14 @@ async function runTests() {
     // -----------------------------------------------------------------
     // TEST 2: OCR Success & Field Extraction
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 2: OCR Extraction Success & Field Verification${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 2: OCR Extraction Success & Field Verification${colors.reset}`
+    );
     assert(ingestedAssetA.extractionStatus === 'EXTRACTED', 'extractionStatus is EXTRACTED');
-    assert(ingestedAssetA.ocrConfidence >= 75, `ocrConfidence is high (observed: ${ingestedAssetA.ocrConfidence}%)`);
+    assert(
+      ingestedAssetA.ocrConfidence >= 75,
+      `ocrConfidence is high (observed: ${ingestedAssetA.ocrConfidence}%)`
+    );
 
     const meta = ingestedAssetA.metadata || {};
     assert(Boolean(meta.ticketNumber), `ticketNumber extracted: ${meta.ticketNumber}`);
@@ -200,13 +221,18 @@ async function runTests() {
 
     // Verify database persistence
     const dbAssetA = await Asset.findById(ingestedAssetA._id);
-    assert(dbAssetA.extractionStatus === 'EXTRACTED', 'Database record has extractionStatus EXTRACTED');
+    assert(
+      dbAssetA.extractionStatus === 'EXTRACTED',
+      'Database record has extractionStatus EXTRACTED'
+    );
     assert(dbAssetA.originalValue === meta.fare, 'Asset originalValue synced with extracted fare');
 
     // -----------------------------------------------------------------
     // TEST 3: Invalid File Type & Prohibited Executables
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 3: Invalid File Type & Executable Prevention${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 3: Invalid File Type & Executable Prevention${colors.reset}`
+    );
     // 3a. Prohibited executable extension (.exe)
     const exeBuffer = Buffer.from('MZ_DUMMY_EXECUTABLE_BINARY', 'utf8');
     const exeRes = await uploadFile(
@@ -218,7 +244,8 @@ async function runTests() {
     );
     assert(exeRes.status === 400, 'Executable (.exe) rejected with 400 Bad Request');
     assert(
-      exeRes.body?.message?.includes('prohibited') || exeRes.body?.message?.includes('Invalid file type'),
+      exeRes.body?.message?.includes('prohibited') ||
+        exeRes.body?.message?.includes('Invalid file type'),
       'Security error message explains prohibited executable files'
     );
 
@@ -242,9 +269,13 @@ async function runTests() {
       'image/png',
       tokenA
     );
-    assert(spoofedRes.status === 400, 'Spoofed file with invalid magic bytes rejected with 400 Bad Request');
     assert(
-      spoofedRes.body?.message?.includes('header signature') || spoofedRes.body?.message?.includes('Corrupted'),
+      spoofedRes.status === 400,
+      'Spoofed file with invalid magic bytes rejected with 400 Bad Request'
+    );
+    assert(
+      spoofedRes.body?.message?.includes('header signature') ||
+        spoofedRes.body?.message?.includes('Corrupted'),
       'Magic byte validation caught disguised file'
     );
 
@@ -274,14 +305,17 @@ async function runTests() {
     );
     assert(oversizedRes.status === 400, 'Oversized file (>5MB) rejected with 400 Bad Request');
     assert(
-      oversizedRes.body?.message?.includes('too large') || oversizedRes.body?.message?.includes('Maximum allowed size'),
+      oversizedRes.body?.message?.includes('too large') ||
+        oversizedRes.body?.message?.includes('Maximum allowed size'),
       'Error message highlights file size constraint'
     );
 
     // -----------------------------------------------------------------
     // TEST 5: OCR Failure Handling (Unreadable / Corrupt Document)
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 5: OCR Failure & Unreadable Document Handling${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 5: OCR Failure & Unreadable Document Handling${colors.reset}`
+    );
     const corruptPdfBuffer = createValidPDFBuffer('SIMULATE_OCR_FAILURE: Corrupt blur artifact');
     const failRes = await uploadFile(
       '/assets/railway/ingest',
@@ -294,17 +328,16 @@ async function runTests() {
     assert(failRes.status === 201, 'Corrupted document ingested and asset created (201 Created)');
     assert(failRes.body?.data?.extractionStatus === 'FAILED', 'extractionStatus marked as FAILED');
     assert(failRes.body?.data?.ocrConfidence < 30, 'ocrConfidence is low (< 30%)');
-    assert(
-      Boolean(failRes.body?.data?.metadata?.ocrNotes),
-      'ocrNotes explains extraction failure'
-    );
+    assert(Boolean(failRes.body?.data?.metadata?.ocrNotes), 'ocrNotes explains extraction failure');
 
     ingestedFailedAsset = failRes.body?.data;
 
     // -----------------------------------------------------------------
     // TEST 6: Unauthorized Access & Cross-User Document Protection
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 6: Unauthorized Access & Document Boundary Protection${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 6: Unauthorized Access & Document Boundary Protection${colors.reset}`
+    );
     // 6a. Upload without token
     const unauthUpload = await uploadFile(
       '/assets/railway/ingest',
@@ -317,7 +350,10 @@ async function runTests() {
 
     // 6b. Download document without token
     const unauthDoc = await apiCall(`/assets/${ingestedAssetA._id}/document`, 'GET', null, null);
-    assert(unauthDoc.status === 401, 'GET /assets/:id/document without token rejected with 401 Unauthorized');
+    assert(
+      unauthDoc.status === 401,
+      'GET /assets/:id/document without token rejected with 401 Unauthorized'
+    );
 
     // 6c. User B attempts to access User A's uploaded private ticket document
     const crossDoc = await apiCall(`/assets/${ingestedAssetA._id}/document`, 'GET', null, tokenB);
@@ -332,7 +368,9 @@ async function runTests() {
     assert(ownerDoc.status === 200, 'Owner successfully downloads own ticket document (200 OK)');
   } finally {
     // Clean up test records and uploaded files
-    console.log(`\n${colors.yellow}[CLEANUP] Cleaning up test records and temporary upload files...${colors.reset}`);
+    console.log(
+      `\n${colors.yellow}[CLEANUP] Cleaning up test records and temporary upload files...${colors.reset}`
+    );
     const userIds = [userA?._id, userB?._id].filter(Boolean);
     if (userIds.length > 0) {
       const assets = await Asset.find({ ownerId: { $in: userIds } });

@@ -5,10 +5,20 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { User } from '../src/modules/users/user.model.js';
 import { Asset } from '../src/modules/assets/asset.model.js';
-import { createAssetDomain, RailwayTicket, BusTicket, EventTicket, DocumentAsset } from '../src/modules/assets/types/index.js';
+import {
+  createAssetDomain,
+  RailwayTicket,
+  BusTicket,
+  EventTicket,
+  DocumentAsset,
+} from '../src/modules/assets/types/index.js';
 import { getAssetVerifier } from '../src/modules/verification/verifiers/asset-verifier.factory.js';
 import { RailwayTicketVerifier } from '../src/modules/verification/verifiers/railway-ticket.verifier.js';
-import { AssetTypes, AssetStatus, VerificationStatus } from '../src/common/constants/asset-types.constant.js';
+import {
+  AssetTypes,
+  AssetStatus,
+  VerificationStatus,
+} from '../src/common/constants/asset-types.constant.js';
 import { env } from '../src/config/env.config.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -73,7 +83,9 @@ function assert(condition, testName, details = '') {
 }
 
 async function runTests() {
-  console.log(`\n${colors.bold}${colors.cyan}======================================================`);
+  console.log(
+    `\n${colors.bold}${colors.cyan}======================================================`
+  );
   console.log(`     GENERIC ASSET ABSTRACTION & OWNERSHIP TEST SUITE`);
   console.log(`======================================================${colors.reset}\n`);
   console.log(`Target API URL: ${BASE_URL}\n`);
@@ -125,11 +137,25 @@ async function runTests() {
     const railDomain = createAssetDomain({
       ownerId: userA._id,
       assetType: AssetTypes.RAILWAY_TICKET,
-      metadata: { pnr: 'PNR12345678', trainNumber: '701', fromStation: 'Dhaka', toStation: 'Chittagong' },
+      metadata: {
+        pnr: 'PNR12345678',
+        trainNumber: '701',
+        fromStation: 'Dhaka',
+        toStation: 'Chittagong',
+      },
     });
-    assert(railDomain instanceof RailwayTicket, 'RailwayTicket domain model instantiated correctly');
-    assert(railDomain.pnr === 'PNR12345678', 'RailwayTicket exposes type-safe metadata getters (pnr)');
-    assert(railDomain.generateUniqueIdentifier() === 'RAIL-PNR-PNR12345678', 'RailwayTicket derives unique PNR identifier');
+    assert(
+      railDomain instanceof RailwayTicket,
+      'RailwayTicket domain model instantiated correctly'
+    );
+    assert(
+      railDomain.pnr === 'PNR12345678',
+      'RailwayTicket exposes type-safe metadata getters (pnr)'
+    );
+    assert(
+      railDomain.generateUniqueIdentifier() === 'RAIL-PNR-PNR12345678',
+      'RailwayTicket derives unique PNR identifier'
+    );
 
     const busDomain = createAssetDomain({
       ownerId: userA._id,
@@ -181,9 +207,19 @@ async function runTests() {
     assert(createRes.body?.success === true, 'Response indicates success: true');
     assert(createRes.body?.data?.assetType === 'RAILWAY_TICKET', 'Asset type is RAILWAY_TICKET');
     assert(createRes.body?.data?.status === 'DRAFT', 'Default status is DRAFT');
-    assert(createRes.body?.data?.verificationStatus === 'NOT_REQUESTED', 'Initial verificationStatus is NOT_REQUESTED');
-    assert(createRes.body?.data?.ownerId?.toString() === userA._id.toString() || createRes.body?.data?.ownerId?._id === userA._id.toString(), 'ownerId accurately assigned to authenticated user');
-    assert(createRes.body?.data?.metadata?.pnr === `PNR-${timestamp}-01`, 'metadata preserved on asset');
+    assert(
+      createRes.body?.data?.verificationStatus === 'NOT_REQUESTED',
+      'Initial verificationStatus is NOT_REQUESTED'
+    );
+    assert(
+      createRes.body?.data?.ownerId?.toString() === userA._id.toString() ||
+        createRes.body?.data?.ownerId?._id === userA._id.toString(),
+      'ownerId accurately assigned to authenticated user'
+    );
+    assert(
+      createRes.body?.data?.metadata?.pnr === `PNR-${timestamp}-01`,
+      'metadata preserved on asset'
+    );
 
     createdAssetA = createRes.body?.data;
 
@@ -206,12 +242,20 @@ async function runTests() {
     // -----------------------------------------------------------------
     // TEST 3: Asset Retrieval (GET /api/v1/assets/:id & GET /api/v1/assets/my)
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 3: Asset Retrieval (GET /assets/:id & GET /assets/my)${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 3: Asset Retrieval (GET /assets/:id & GET /assets/my)${colors.reset}`
+    );
     // Owner retrieves own asset
     const getOwnerRes = await apiCall(`/assets/${createdAssetA._id}`, 'GET', null, tokenA);
     assert(getOwnerRes.status === 200, 'Owner retrieves own asset details (200 OK)');
-    assert(getOwnerRes.body?.data?._id === createdAssetA._id, 'Returned asset matches requested ID');
-    assert(getOwnerRes.body?.data?.verificationStatus === 'NOT_REQUESTED', 'verificationStatus is present in response');
+    assert(
+      getOwnerRes.body?.data?._id === createdAssetA._id,
+      'Returned asset matches requested ID'
+    );
+    assert(
+      getOwnerRes.body?.data?.verificationStatus === 'NOT_REQUESTED',
+      'verificationStatus is present in response'
+    );
 
     // GET /api/v1/assets/my retrieves caller's assets
     const myAssetsRes = await apiCall('/assets/my', 'GET', null, tokenA);
@@ -232,32 +276,63 @@ async function runTests() {
     console.log(`\n${colors.bold}Scenario 4: Ownership Authorization Checks${colors.reset}`);
     // User B attempts to access User A's private draft asset
     const crossGetRes = await apiCall(`/assets/${createdAssetA._id}`, 'GET', null, tokenB);
-    assert(crossGetRes.status === 403, 'User B accessing User A private asset rejected with 403 Forbidden');
-    assert(crossGetRes.body?.message?.includes('Forbidden'), 'Forbidden message explains unauthorized private asset boundary');
+    assert(
+      crossGetRes.status === 403,
+      'User B accessing User A private asset rejected with 403 Forbidden'
+    );
+    assert(
+      crossGetRes.body?.message?.includes('Forbidden'),
+      'Forbidden message explains unauthorized private asset boundary'
+    );
 
     // User B attempts to modify User A's asset
-    const crossPatchRes = await apiCall(`/assets/${createdAssetA._id}`, 'PATCH', { title: 'Hacked Title' }, tokenB);
-    assert(crossPatchRes.status === 403, 'User B modifying User A asset rejected with 403 Forbidden');
-    assert(crossPatchRes.body?.message?.includes('modify your own assets'), 'Modification strictly restricted to owner');
+    const crossPatchRes = await apiCall(
+      `/assets/${createdAssetA._id}`,
+      'PATCH',
+      { title: 'Hacked Title' },
+      tokenB
+    );
+    assert(
+      crossPatchRes.status === 403,
+      'User B modifying User A asset rejected with 403 Forbidden'
+    );
+    assert(
+      crossPatchRes.body?.message?.includes('modify your own assets'),
+      'Modification strictly restricted to owner'
+    );
 
     // User B attempts to delete User A's asset
     const crossDeleteRes = await apiCall(`/assets/${createdAssetA._id}`, 'DELETE', null, tokenB);
-    assert(crossDeleteRes.status === 403, 'User B deleting User A asset rejected with 403 Forbidden');
-    assert(crossDeleteRes.body?.message?.includes('delete your own assets'), 'Deletion strictly restricted to owner');
+    assert(
+      crossDeleteRes.status === 403,
+      'User B deleting User A asset rejected with 403 Forbidden'
+    );
+    assert(
+      crossDeleteRes.body?.message?.includes('delete your own assets'),
+      'Deletion strictly restricted to owner'
+    );
 
     // Admin CAN access User A's asset for review
     const adminGetRes = await apiCall(`/assets/${createdAssetA._id}`, 'GET', null, tokenAdmin);
     assert(adminGetRes.status === 200, 'ADMIN authorized to view any asset for compliance');
 
     // User A can modify their own asset
-    const ownerPatchRes = await apiCall(`/assets/${createdAssetA._id}`, 'PATCH', { title: 'Updated Train Title' }, tokenA);
+    const ownerPatchRes = await apiCall(
+      `/assets/${createdAssetA._id}`,
+      'PATCH',
+      { title: 'Updated Train Title' },
+      tokenA
+    );
     assert(ownerPatchRes.status === 200, 'Owner successfully updates own asset (200 OK)');
     assert(ownerPatchRes.body?.data?.title === 'Updated Train Title', 'Title updated correctly');
 
     // User A deletes their own asset
     const ownerDeleteRes = await apiCall(`/assets/${createdAssetA._id}`, 'DELETE', null, tokenA);
     assert(ownerDeleteRes.status === 200, 'Owner successfully deletes own asset (200 OK)');
-    assert(ownerDeleteRes.body?.data?.deletedAssetId === createdAssetA._id, 'Confirmed deleted asset ID returned');
+    assert(
+      ownerDeleteRes.body?.data?.deletedAssetId === createdAssetA._id,
+      'Confirmed deleted asset ID returned'
+    );
 
     // Subsequent retrieval yields 404
     const postDeleteGet = await apiCall(`/assets/${createdAssetA._id}`, 'GET', null, tokenA);
@@ -273,9 +348,14 @@ async function runTests() {
       uniqueAssetIdentifier: `SPACEX-${timestamp}`,
     };
     const invalidTypeRes = await apiCall('/assets', 'POST', invalidTypePayload, tokenA);
-    assert(invalidTypeRes.status === 422, 'POST /assets with invalid assetType rejected with 422 Unprocessable Entity');
     assert(
-      invalidTypeRes.body?.errors?.some((e) => e.field?.includes('assetType') || e.message?.includes('Invalid asset type')),
+      invalidTypeRes.status === 422,
+      'POST /assets with invalid assetType rejected with 422 Unprocessable Entity'
+    );
+    assert(
+      invalidTypeRes.body?.errors?.some(
+        (e) => e.field?.includes('assetType') || e.message?.includes('Invalid asset type')
+      ),
       'Validation error highlights invalid asset type'
     );
 
@@ -290,18 +370,32 @@ async function runTests() {
     assert(unauthMy.status === 401, 'GET /assets/my without token rejected with 401 Unauthorized');
 
     const unauthDelete = await apiCall(`/assets/${createdAssetB._id}`, 'DELETE', null, null);
-    assert(unauthDelete.status === 401, 'DELETE /assets/:id without token rejected with 401 Unauthorized');
+    assert(
+      unauthDelete.status === 401,
+      'DELETE /assets/:id without token rejected with 401 Unauthorized'
+    );
 
     const unauthGet = await apiCall(`/assets/${createdAssetB._id}`, 'GET', null, null);
-    assert(unauthGet.status === 401, 'GET /assets/:id private asset without token rejected with 401 Unauthorized');
+    assert(
+      unauthGet.status === 401,
+      'GET /assets/:id private asset without token rejected with 401 Unauthorized'
+    );
 
     // -----------------------------------------------------------------
     // TEST 7: Modular Verifier Interface & RailwayTicketVerifier
     // -----------------------------------------------------------------
-    console.log(`\n${colors.bold}Scenario 7: Modular Verifier Interface & RailwayTicketVerifier${colors.reset}`);
+    console.log(
+      `\n${colors.bold}Scenario 7: Modular Verifier Interface & RailwayTicketVerifier${colors.reset}`
+    );
     const railwayVerifier = getAssetVerifier(AssetTypes.RAILWAY_TICKET);
-    assert(railwayVerifier instanceof RailwayTicketVerifier, 'Factory returns RailwayTicketVerifier for RAILWAY_TICKET');
-    assert(railwayVerifier.getAssetType() === AssetTypes.RAILWAY_TICKET, 'getAssetType returns RAILWAY_TICKET');
+    assert(
+      railwayVerifier instanceof RailwayTicketVerifier,
+      'Factory returns RailwayTicketVerifier for RAILWAY_TICKET'
+    );
+    assert(
+      railwayVerifier.getAssetType() === AssetTypes.RAILWAY_TICKET,
+      'getAssetType returns RAILWAY_TICKET'
+    );
 
     const mockAssetDoc = {
       _id: new mongoose.Types.ObjectId(),
@@ -311,16 +405,31 @@ async function runTests() {
     };
 
     const verifierResult = await railwayVerifier.verify(mockAssetDoc);
-    assert(verifierResult.isVerified === false, 'RailwayTicketVerifier stub returns isVerified: false');
-    assert(verifierResult.status === VerificationStatus.IN_REVIEW, 'RailwayTicketVerifier stub returns IN_REVIEW');
+    assert(
+      verifierResult.isVerified === false,
+      'RailwayTicketVerifier stub returns isVerified: false'
+    );
+    assert(
+      verifierResult.status === VerificationStatus.IN_REVIEW,
+      'RailwayTicketVerifier stub returns IN_REVIEW'
+    );
     assert(Array.isArray(verifierResult.checks), 'Verifier returns structured checks array');
-    assert(verifierResult.checks.some((c) => c.checkType === 'PNR_STRUCTURE_VALIDATION'), 'Contains PNR_STRUCTURE_VALIDATION check');
-    assert(verifierResult.details?.stubMode === true, 'Verifier details explicitly state stubMode: true');
+    assert(
+      verifierResult.checks.some((c) => c.checkType === 'PNR_STRUCTURE_VALIDATION'),
+      'Contains PNR_STRUCTURE_VALIDATION check'
+    );
+    assert(
+      verifierResult.details?.stubMode === true,
+      'Verifier details explicitly state stubMode: true'
+    );
 
     // Fallback verifier for future types
     const busVerifier = getAssetVerifier(AssetTypes.BUS_TICKET);
     const busResult = await busVerifier.verify({ assetType: AssetTypes.BUS_TICKET });
-    assert(busResult.details?.stubMode === true, 'Generic fallback verifier available for future asset types');
+    assert(
+      busResult.details?.stubMode === true,
+      'Generic fallback verifier available for future asset types'
+    );
   } finally {
     // Clean up test records
     console.log(`\n${colors.yellow}[CLEANUP] Cleaning up test users and assets...${colors.reset}`);
