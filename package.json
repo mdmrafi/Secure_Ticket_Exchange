@@ -21,9 +21,11 @@
     "test:admin": "npm run test:admin --prefix backend",
     "test:jobs": "npm run test:jobs --prefix backend",
     "test:transactions": "npm run test:transactions --prefix backend",
-    "test:generic": "npm run test:generic --prefix backend"
+    "test:generic": "npm run test:generic --prefix backend",
+    "uipro": "uipro"
   },
   "devDependencies": {
-    "prettier": "^3.9.9"
+    "prettier": "^3.9.9",
+    "uipro-cli": "^2.2.3"
   }
 }
