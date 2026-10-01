@@ -89,3 +89,11 @@ export const TransferEventType = {
   TRANSFER_FAILED_ROLLBACK: 'TRANSFER_FAILED_ROLLBACK',
 };
 
+export const RiskLevel = {
+  LOW: 'LOW',
+  MEDIUM: 'MEDIUM',
+  HIGH: 'HIGH',
+  CRITICAL: 'CRITICAL',
+};
+
+

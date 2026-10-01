@@ -15,8 +15,10 @@
     "test:listings": "node scripts/test-marketplace-listings.js",
     "test:reservation": "node scripts/test-atomic-reservation.js",
     "test:transactions": "node scripts/test-transaction-system.js",
-    "test:transfers": "node scripts/test-transfer-workflow.js"
+    "test:transfers": "node scripts/test-transfer-workflow.js",
+    "test:fraud": "node scripts/test-fraud-detection.js"
   },
+
   "keywords": [
     "asset-exchange",
     "secure-tickets",

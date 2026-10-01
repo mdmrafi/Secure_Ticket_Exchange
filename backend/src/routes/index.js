@@ -11,6 +11,7 @@ import { reportRoutes } from '../modules/reports/report.routes.js';
 import { adminRoutes } from '../modules/admin/admin.routes.js';
 import { kycRoutes } from '../modules/kyc/kyc.routes.js';
 import { transferRoutes } from '../modules/transfers/transfer.routes.js';
+import { fraudRoutes } from '../modules/fraud/fraud.routes.js';
 
 const apiRouter = Router();
 
@@ -22,6 +23,7 @@ apiRouter.use('/assets', assetRoutes);
 apiRouter.use('/listings', listingRoutes);
 apiRouter.use('/transactions', transactionRoutes);
 apiRouter.use('/transfers', transferRoutes);
+apiRouter.use('/fraud', fraudRoutes);
 apiRouter.use('/verification', verificationRoutes);
 apiRouter.use('/kyc', kycRoutes);
 apiRouter.use('/notifications', notificationRoutes);
@@ -29,4 +31,5 @@ apiRouter.use('/reports', reportRoutes);
 apiRouter.use('/admin', adminRoutes);
 
 export { apiRouter };
+
 
