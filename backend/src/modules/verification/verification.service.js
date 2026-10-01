@@ -6,6 +6,8 @@ import { AssetStatus, VerificationStatus, AssetTypes } from '../../common/consta
 import { getAssetVerifier } from './verifiers/asset-verifier.factory.js';
 import { verificationEngine } from './engine/verification-engine.js';
 import { logger } from '../../config/logger.config.js';
+import { publishEvent } from '../../jobs/publisher.js';
+import { EventNames } from '../../common/constants/events.constant.js';
 
 export class VerificationService {
   constructor(repo = verificationRepository, assetRepo = assetRepository, engine = verificationEngine) {
@@ -117,6 +119,20 @@ export class VerificationService {
       completedAt: new Date(),
     });
 
+    if (result.status === VerificationStatus.VERIFIED) {
+      publishEvent(
+        EventNames.ASSET_VERIFIED,
+        {
+          assetId,
+          ownerId: asset.ownerId?._id?.toString() || asset.ownerId?.toString(),
+          verificationId: verificationRecord._id.toString(),
+          status: result.status,
+          confidenceScore: result.overallConfidenceScore,
+        },
+        { id: requestingUser?.userId || asset.ownerId }
+      ).catch(() => {});
+    }
+
     return {
       ...result,
       verificationId: verificationRecord._id,
@@ -139,6 +155,18 @@ export class VerificationService {
     await this.assetRepo.updateById(assetId, {
       verificationStatus: result.status,
     });
+
+    if (result.status === VerificationStatus.VERIFIED) {
+      publishEvent(
+        EventNames.ASSET_VERIFIED,
+        {
+          assetId,
+          ownerId: asset.ownerId?._id?.toString() || asset.ownerId?.toString(),
+          status: result.status,
+        },
+        { id: asset.ownerId }
+      ).catch(() => {});
+    }
 
     return result;
   }

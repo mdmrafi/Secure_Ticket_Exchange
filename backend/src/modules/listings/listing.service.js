@@ -16,6 +16,8 @@ import {
   VerificationStatus,
 } from '../../common/constants/asset-types.constant.js';
 import { KYCStatus } from '../kyc/kyc.constant.js';
+import { publishEvent } from '../../jobs/publisher.js';
+import { EventNames } from '../../common/constants/events.constant.js';
 
 // Protected ticket identity and asset fields that sellers are strictly prohibited from mutating
 export const PROTECTED_TICKET_IDENTITY_FIELDS = [
@@ -180,6 +182,20 @@ export class ListingService {
     if (status === ListingStatus.ACTIVE) {
       await this.assetRepo.updateById(asset._id, { status: AssetStatus.LISTED });
     }
+
+    // Asynchronously dispatch listing.created event for background jobs
+    publishEvent(
+      EventNames.LISTING_CREATED,
+      {
+        listingId: listing._id.toString(),
+        sellerId: sellerId.toString(),
+        assetId: asset._id.toString(),
+        askingPrice: listing.askingPrice,
+        currency: listing.currency,
+        status: listing.status,
+      },
+      { id: sellerId.toString() }
+    ).catch(() => {});
 
     return listing;
   }
@@ -526,6 +542,19 @@ export class ListingService {
           };
         });
 
+        // Asynchronously dispatch listing.reserved event for background jobs
+        publishEvent(
+          EventNames.LISTING_RESERVED,
+          {
+            listingId: listingId.toString(),
+            buyerId: buyerId.toString(),
+            sellerId: (result.listing.sellerId?._id || result.listing.sellerId).toString(),
+            reservationId: result.reservation._id.toString(),
+            expiresAt,
+          },
+          { id: buyerId.toString() }
+        ).catch(() => {});
+
         return result;
       } catch (err) {
         if (err.code === 11000 || (err.name === 'MongoServerError' && err.code === 11000)) {
@@ -557,6 +586,19 @@ export class ListingService {
           expiresAt,
           status: ReservationStatus.ACTIVE,
         });
+
+        // Asynchronously dispatch listing.reserved event for background jobs
+        publishEvent(
+          EventNames.LISTING_RESERVED,
+          {
+            listingId: listingId.toString(),
+            buyerId: buyerId.toString(),
+            sellerId: (updatedListing.sellerId?._id || updatedListing.sellerId).toString(),
+            reservationId: newReservation._id.toString(),
+            expiresAt,
+          },
+          { id: buyerId.toString() }
+        ).catch(() => {});
 
         return {
           reservation: newReservation,

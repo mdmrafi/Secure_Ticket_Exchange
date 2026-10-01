@@ -1,27 +1,28 @@
-import { inngest } from '../../config/inngest.config.js';
-import { logger } from '../../config/logger.config.js';
+import { auditJobs } from './audit.jobs.js';
+import { notificationJobs } from './notification.jobs.js';
+import { emailJobs } from './email.jobs.js';
+import { reservationCleanupJobs } from './reservation-cleanup.jobs.js';
+import { verificationJobs, verificationRetriesJob } from './verification-retry.jobs.js';
+import { reminderJobs, transactionRemindersJob } from './transaction-reminder.jobs.js';
 
-/**
- * Example background job: Asset verification workflow
- * Handles heavy asynchronous validation (PDF parsing, OCR, QR code check)
- */
-export const assetVerificationJob = inngest.createFunction(
-  { id: 'asset-verification-job' },
-  { event: 'asset/verification.requested' },
-  async ({ event, step }) => {
-    logger.info({ eventData: event.data }, 'Inngest job: Starting asset verification background job');
+// Aggregate all Inngest functions for API serve loader
+export const allInngestFunctions = [
+  ...auditJobs,
+  ...notificationJobs,
+  ...emailJobs,
+  ...reservationCleanupJobs,
+  ...verificationJobs,
+  ...reminderJobs,
+];
 
-    const result = await step.run('verify-asset-payload', async () => {
-      // Step placeholder: Verify asset authenticity against rules or external services
-      return {
-        assetId: event.data.assetId,
-        status: 'PENDING_REVIEW',
-        verifiedAt: new Date().toISOString(),
-      };
-    });
-
-    return { success: true, result };
-  }
-);
-
-export const allInngestFunctions = [assetVerificationJob];
+// Named exports for direct access and testing
+export {
+  auditJobs,
+  notificationJobs,
+  emailJobs,
+  reservationCleanupJobs,
+  verificationJobs,
+  reminderJobs,
+  verificationRetriesJob,
+  transactionRemindersJob,
+};

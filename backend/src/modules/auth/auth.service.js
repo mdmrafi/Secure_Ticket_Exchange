@@ -9,6 +9,8 @@ import {
   ConflictError,
   NotFoundError,
 } from '../../common/errors/index.js';
+import { publishEvent } from '../../jobs/publisher.js';
+import { EventNames } from '../../common/constants/events.constant.js';
 
 export class AuthService {
   constructor(authRepo = authRepository, userRepo = userRepository) {
@@ -72,6 +74,18 @@ export class AuthService {
       createdByIp: clientInfo.ip || null,
       userAgent: clientInfo.userAgent || null,
     });
+
+    // Asynchronously dispatch user.created event for background jobs (welcome email, audit processing)
+    publishEvent(
+      EventNames.USER_CREATED,
+      {
+        userId: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+      { id: user._id.toString(), email: user.email, role: user.role }
+    ).catch(() => {});
 
     return {
       user: this.formatUserResponse(user),

@@ -8,6 +8,8 @@ import { ExtractionStatus } from './constants/ingestion.constant.js';
 import { NotFoundError, ConflictError, ForbiddenError, BadRequestError, UnauthorizedError } from '../../common/errors/index.js';
 import { AssetTypes, AssetStatus, VerificationStatus } from '../../common/constants/asset-types.constant.js';
 import { logger } from '../../config/logger.config.js';
+import { publishEvent } from '../../jobs/publisher.js';
+import { EventNames } from '../../common/constants/events.constant.js';
 
 export class AssetService {
   constructor(repo = assetRepository) {
@@ -51,7 +53,22 @@ export class AssetService {
       'Creating new asset'
     );
 
-    return this.repo.create(payload);
+    const createdAsset = await this.repo.create(payload);
+
+    // Asynchronously dispatch asset.created event for background jobs
+    publishEvent(
+      EventNames.ASSET_CREATED,
+      {
+        assetId: createdAsset._id.toString(),
+        ownerId: ownerId.toString(),
+        assetType: createdAsset.assetType,
+        uniqueAssetIdentifier: createdAsset.uniqueAssetIdentifier,
+        title: createdAsset.title,
+      },
+      { id: ownerId.toString() }
+    ).catch(() => {});
+
+    return createdAsset;
   }
 
   /**

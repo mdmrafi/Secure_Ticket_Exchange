@@ -1,5 +1,7 @@
 import { reportRepository } from './report.repository.js';
 import { NotFoundError } from '../../common/errors/index.js';
+import { publishEvent } from '../../jobs/publisher.js';
+import { EventNames } from '../../common/constants/events.constant.js';
 
 export class ReportService {
   constructor(repo = reportRepository) {
@@ -7,10 +9,26 @@ export class ReportService {
   }
 
   async createReport(reporterId, data) {
-    return this.repo.create({
+    const report = await this.repo.create({
       ...data,
       reporterId,
     });
+
+    // Asynchronously dispatch report.created event for background jobs
+    publishEvent(
+      EventNames.REPORT_CREATED,
+      {
+        reportId: report._id.toString(),
+        reporterId: reporterId.toString(),
+        targetId: report.targetId?.toString(),
+        targetType: report.targetType,
+        category: report.category,
+        reason: report.reason,
+      },
+      { id: reporterId.toString() }
+    ).catch(() => {});
+
+    return report;
   }
 
   async getReportById(id) {

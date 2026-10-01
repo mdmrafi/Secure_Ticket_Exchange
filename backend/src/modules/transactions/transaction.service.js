@@ -20,6 +20,8 @@ import {
   PaymentStatus,
   AssetStatus,
 } from '../../common/constants/asset-types.constant.js';
+import { publishEvent } from '../../jobs/publisher.js';
+import { EventNames } from '../../common/constants/events.constant.js';
 
 // Strict State Transition Matrix for Transactions
 export const ALLOWED_TRANSACTION_TRANSITIONS = {
@@ -196,6 +198,22 @@ export class TransactionService {
       },
     });
 
+    // Asynchronously dispatch transaction.created event for background jobs
+    publishEvent(
+      EventNames.TRANSACTION_CREATED,
+      {
+        transactionId: transaction._id.toString(),
+        buyerId: buyerId.toString(),
+        sellerId: (listing.sellerId._id || listing.sellerId).toString(),
+        listingId: listing._id.toString(),
+        assetId: (listing.assetId._id || listing.assetId).toString(),
+        amount,
+        currency,
+        buyerEmail: buyer.email,
+      },
+      { id: buyerId.toString() }
+    ).catch(() => {});
+
     return transaction;
   }
 
@@ -328,6 +346,21 @@ export class TransactionService {
           escrowStatus: 'HELD',
         },
       });
+
+      // Asynchronously dispatch payment.completed event for background jobs
+      publishEvent(
+        EventNames.PAYMENT_COMPLETED,
+        {
+          transactionId: tx._id.toString(),
+          buyerId: (tx.buyerId?._id || tx.buyerId).toString(),
+          sellerId: (tx.sellerId?._id || tx.sellerId).toString(),
+          amount: tx.amount,
+          currency: tx.currency,
+          transactionRef: paymentResult.transactionRef,
+          paidAt: paymentResult.paidAt,
+        },
+        { id: userId }
+      ).catch(() => {});
 
       return updatedTx;
     } else {

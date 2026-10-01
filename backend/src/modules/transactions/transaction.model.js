@@ -98,6 +98,10 @@ const transactionSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    metadata: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
   },
   {
     timestamps: true,

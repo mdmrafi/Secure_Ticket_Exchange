@@ -14,6 +14,8 @@ import {
   ForbiddenError,
 } from '../../common/errors/index.js';
 import { logger } from '../../config/logger.config.js';
+import { publishEvent } from '../../jobs/publisher.js';
+import { EventNames } from '../../common/constants/events.constant.js';
 
 export class KYCService {
   constructor(repo = kycRepository) {
@@ -274,6 +276,22 @@ export class KYCService {
       { userId, kycId: updatedRecord._id, status: toStatus },
       'KYC identity submission evaluated and state updated'
     );
+
+    // Asynchronously dispatch kyc.completed event for background jobs
+    if (toStatus === KYCStatus.VERIFIED) {
+      publishEvent(
+        EventNames.KYC_COMPLETED,
+        {
+          kycId: updatedRecord._id.toString(),
+          userId: user._id.toString(),
+          email: user.email,
+          name: user.name,
+          verificationLevel: evaluation.verificationLevel,
+          verifiedAt: now,
+        },
+        { id: user._id.toString(), email: user.email }
+      ).catch(() => {});
+    }
 
     // Return sanitized status
     return this.formatKYCStatusDTO(updatedRecord);

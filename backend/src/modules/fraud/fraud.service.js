@@ -12,6 +12,8 @@ import {
   AssetStatus,
 } from '../../common/constants/asset-types.constant.js';
 import { NotFoundError, BadRequestError } from '../../common/errors/index.js';
+import { publishEvent } from '../../jobs/publisher.js';
+import { EventNames } from '../../common/constants/events.constant.js';
 
 export class FraudService {
   /**
@@ -79,6 +81,23 @@ export class FraudService {
       timestamp: evaluation.timestamp,
     });
 
+    if (evaluation.riskLevel === RiskLevel.HIGH || evaluation.riskLevel === RiskLevel.CRITICAL) {
+      publishEvent(
+        EventNames.FRAUD_DETECTED,
+        {
+          targetId: asset._id.toString(),
+          targetType: 'ASSET',
+          userId: user ? user._id.toString() : null,
+          userEmail: user?.email,
+          riskLevel: evaluation.riskLevel,
+          overallScore: evaluation.overallScore,
+          summaryExplanation: evaluation.summaryExplanation,
+          recommendedAction: evaluation.recommendedAction,
+        },
+        { id: user?._id?.toString() }
+      ).catch(() => {});
+    }
+
     return assessment;
   }
 
@@ -114,6 +133,23 @@ export class FraudService {
       provider: evaluation.provider,
       timestamp: evaluation.timestamp,
     });
+
+    if (evaluation.riskLevel === RiskLevel.HIGH || evaluation.riskLevel === RiskLevel.CRITICAL) {
+      publishEvent(
+        EventNames.FRAUD_DETECTED,
+        {
+          targetId: user._id.toString(),
+          targetType: 'USER',
+          userId: user._id.toString(),
+          userEmail: user.email,
+          riskLevel: evaluation.riskLevel,
+          overallScore: evaluation.overallScore,
+          summaryExplanation: evaluation.summaryExplanation,
+          recommendedAction: evaluation.recommendedAction,
+        },
+        { id: user._id.toString() }
+      ).catch(() => {});
+    }
 
     return assessment;
   }

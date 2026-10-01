@@ -17,7 +17,9 @@
     "test:transactions": "node scripts/test-transaction-system.js",
     "test:transfers": "node scripts/test-transfer-workflow.js",
     "test:fraud": "node scripts/test-fraud-detection.js",
-    "test:messaging": "node scripts/test-socket-messaging.js"
+    "test:messaging": "node scripts/test-socket-messaging.js",
+    "test:jobs": "node scripts/test-inngest-jobs.js",
+    "test:inngest": "node scripts/test-inngest-jobs.js"
   },
 
   "keywords": [

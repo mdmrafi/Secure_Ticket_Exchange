@@ -20,6 +20,8 @@ import {
   ForbiddenError,
   ConflictError,
 } from '../../common/errors/index.js';
+import { publishEvent } from '../../jobs/publisher.js';
+import { EventNames } from '../../common/constants/events.constant.js';
 
 /**
  * Strict State Transition Matrix for Asset Transfers
@@ -501,6 +503,21 @@ export class TransferService {
           completedAt: completedReq.completedAt,
         },
       });
+
+      // Asynchronously dispatch transfer.completed event for background jobs
+      publishEvent(
+        EventNames.TRANSFER_COMPLETED,
+        {
+          transferId: completedReq._id.toString(),
+          assetId: asset._id.toString(),
+          fromUserId: fromUser._id.toString(),
+          toUserId: toUser._id.toString(),
+          transactionId: processingReq.transactionId?._id?.toString() || processingReq.transactionId?.toString() || null,
+          toUserName: toUser.name,
+          toUserEmail: toUser.email,
+        },
+        { id: actorId }
+      ).catch(() => {});
 
       return completedReq;
     } catch (err) {
