@@ -18,11 +18,16 @@ export const AssetStatus = {
 };
 
 export const ListingStatus = {
+  DRAFT: 'DRAFT',
   ACTIVE: 'ACTIVE',
-  PENDING_ESCROW: 'PENDING_ESCROW',
-  COMPLETED: 'COMPLETED',
-  EXPIRED: 'EXPIRED',
+  RESERVED: 'RESERVED',
+  SOLD: 'SOLD',
   CANCELLED: 'CANCELLED',
+  EXPIRED: 'EXPIRED',
+  SUSPENDED: 'SUSPENDED',
+  // Backward compatibility aliases
+  PENDING_ESCROW: 'RESERVED',
+  COMPLETED: 'SOLD',
 };
 
 export const TransactionStatus = {

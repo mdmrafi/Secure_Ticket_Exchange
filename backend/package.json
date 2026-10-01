@@ -11,7 +11,8 @@
     "test:kyc": "node scripts/test-kyc-module.js",
     "test:assets": "node scripts/test-asset-module.js",
     "test:ingestion": "node scripts/test-ticket-ingestion.js",
-    "test:engine": "node scripts/test-verification-engine.js"
+    "test:engine": "node scripts/test-verification-engine.js",
+    "test:listings": "node scripts/test-marketplace-listings.js"
   },
   "keywords": [
     "asset-exchange",

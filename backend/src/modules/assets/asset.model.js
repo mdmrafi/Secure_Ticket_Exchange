@@ -150,4 +150,14 @@ assetSchema.pre('validate', function (next) {
 // Compound index to ensure uniqueness of asset per assetType
 assetSchema.index({ assetType: 1, uniqueAssetIdentifier: 1 }, { unique: true });
 
+// Compound index for listing eligibility and search filtering
+assetSchema.index({ assetType: 1, status: 1, verificationStatus: 1 });
+
+// Common search indexes for route / travel queries
+assetSchema.index({ 'metadata.source': 1, 'metadata.destination': 1 });
+assetSchema.index({ 'metadata.fromStation': 1, 'metadata.toStation': 1 });
+assetSchema.index({ 'metadata.journeyDate': 1 });
+assetSchema.index({ 'metadata.departureDate': 1 });
+assetSchema.index({ 'metadata.eventDate': 1 });
+
 export const Asset = mongoose.model('Asset', assetSchema);
