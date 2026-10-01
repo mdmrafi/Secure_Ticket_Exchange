@@ -13,7 +13,7 @@ export class ReportController {
   });
 
   getById = asyncHandler(async (req, res) => {
-    const report = await this.service.getReportById(req.params.id);
+    const report = await this.service.getReportById(req.params.id, req.user);
     return ApiResponse.success(res, report, 'Report retrieved');
   });
 }

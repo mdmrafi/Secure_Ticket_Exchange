@@ -1,5 +1,5 @@
 import { reportRepository } from './report.repository.js';
-import { NotFoundError } from '../../common/errors/index.js';
+import { NotFoundError, ForbiddenError } from '../../common/errors/index.js';
 import { publishEvent } from '../../jobs/publisher.js';
 import { EventNames } from '../../common/constants/events.constant.js';
 
@@ -31,11 +31,29 @@ export class ReportService {
     return report;
   }
 
-  async getReportById(id) {
+  async getReportById(id, requestingUser = null) {
     const report = await this.repo.findById(id);
     if (!report) {
       throw new NotFoundError('Report not found');
     }
+
+    if (requestingUser) {
+      const reporterIdStr = report.reporterId?._id
+        ? report.reporterId._id.toString()
+        : report.reporterId?.toString();
+      const userIdStr = requestingUser.userId
+        ? requestingUser.userId.toString()
+        : requestingUser.id?.toString();
+      const isReporter = reporterIdStr === userIdStr;
+      const isAdminOrMod = ['ADMIN', 'MODERATOR'].includes(requestingUser.role);
+
+      if (!isReporter && !isAdminOrMod) {
+        throw new ForbiddenError(
+          'Forbidden: You are not authorized to view another user\'s report'
+        );
+      }
+    }
+
     return report;
   }
 

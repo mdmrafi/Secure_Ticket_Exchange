@@ -6,13 +6,16 @@ import { UnauthorizedError } from '../../../common/errors/index.js';
 
 export class JwtAuthProvider extends AuthProviderInterface {
   /**
-   * Verify an incoming access token
+   * Verify an incoming access token with strict algorithm pinning
    * @param {string} token
    * @returns {Promise<{ userId: string, email: string, role: string, provider: string }>}
    */
   async verifyToken(token) {
     try {
-      const decoded = jwt.verify(token, env.JWT_SECRET);
+      // Pin algorithm to HS256 to prevent algorithm confusion attacks (e.g. 'none' algorithm or RSA/HMAC confusion)
+      const decoded = jwt.verify(token, env.JWT_SECRET, {
+        algorithms: ['HS256'],
+      });
       return {
         userId: decoded.id || decoded.userId || decoded.sub,
         email: decoded.email,
@@ -28,13 +31,16 @@ export class JwtAuthProvider extends AuthProviderInterface {
   }
 
   /**
-   * Verify an incoming refresh token
+   * Verify an incoming refresh token with strict algorithm pinning
    * @param {string} token
    * @returns {Promise<{ userId: string }>}
    */
   async verifyRefreshToken(token) {
     try {
-      const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET);
+      // Pin algorithm to HS256
+      const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET, {
+        algorithms: ['HS256'],
+      });
       return {
         userId: decoded.id || decoded.userId || decoded.sub,
       };
@@ -60,6 +66,7 @@ export class JwtAuthProvider extends AuthProviderInterface {
 
     const accessToken = jwt.sign(payload, env.JWT_SECRET, {
       expiresIn: env.JWT_ACCESS_EXPIRES_IN,
+      algorithm: 'HS256',
     });
 
     const refreshPayload = {
@@ -70,6 +77,7 @@ export class JwtAuthProvider extends AuthProviderInterface {
 
     const refreshToken = jwt.sign(refreshPayload, env.JWT_REFRESH_SECRET, {
       expiresIn: env.JWT_REFRESH_EXPIRES_IN,
+      algorithm: 'HS256',
     });
 
     // Parse refresh expiration into a future Date object for MongoDB TTL

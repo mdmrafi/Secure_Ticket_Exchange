@@ -5,9 +5,13 @@ import { HttpStatus } from '../constants/http-status.constant.js';
 
 export const globalRateLimiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MS,
-  max: env.RATE_LIMIT_MAX_REQUESTS,
+  max: env.NODE_ENV === 'development' ? 5000 : env.RATE_LIMIT_MAX_REQUESTS,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Allow test suites to bypass global limiter when explicitly requested in non-production
+    return env.NODE_ENV !== 'production' && req.headers['x-test-bypass-global-limit'] === 'true';
+  },
   handler: (req, res) => {
     return ApiResponse.error(
       res,
@@ -22,6 +26,10 @@ export const authRateLimiter = rateLimit({
   max: 20, // strict limit for sensitive auth actions
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Allow non-rate-limit test suites to bypass auth limiter when explicitly requested in non-production
+    return env.NODE_ENV !== 'production' && req.headers['x-test-bypass-auth-limit'] === 'true';
+  },
   handler: (req, res) => {
     return ApiResponse.error(
       res,

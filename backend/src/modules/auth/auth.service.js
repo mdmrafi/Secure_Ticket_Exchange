@@ -54,7 +54,7 @@ export class AuthService {
       email: registrationData.email,
       phone: registrationData.phone || '',
       passwordHash,
-      role: registrationData.role || 'USER',
+      role: 'USER', // Strictly forced to USER to prevent privilege escalation
       accountStatus: 'ACTIVE',
       emailVerified: false,
     });

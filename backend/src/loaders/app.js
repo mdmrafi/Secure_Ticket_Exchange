@@ -6,6 +6,7 @@ import { serve } from 'inngest/express';
 import { env } from '../config/env.config.js';
 import { corsOptions } from '../config/cors.config.js';
 import { configureSecurityHeaders } from '../common/middlewares/security.middleware.js';
+import { nosqlSanitizer } from '../common/middlewares/nosql-sanitize.middleware.js';
 import { globalRateLimiter } from '../common/middlewares/rate-limiter.middleware.js';
 import { requestLogger } from '../common/middlewares/request-logger.middleware.js';
 import { errorHandler } from '../common/middlewares/error.middleware.js';
@@ -39,10 +40,13 @@ export const createApp = () => {
     })
   );
 
-  // Body parsers
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  // Body parsers with defensive size limits (protection against large payload DoS)
+  app.use(express.json({ limit: '200kb' }));
+  app.use(express.urlencoded({ extended: true, limit: '200kb' }));
   app.use(cookieParser());
+
+  // NoSQL query injection sanitizer
+  app.use(nosqlSanitizer);
 
   // Request logger
   app.use(requestLogger);

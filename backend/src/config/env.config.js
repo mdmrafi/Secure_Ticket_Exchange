@@ -46,6 +46,30 @@ const envSchema = z.object({
   KYC_EXPIRY_DAYS: z.coerce.number().default(365),
   KYC_EXTERNAL_API_KEY: z.string().optional().default(''),
   KYC_EXTERNAL_BASE_URL: z.string().optional().default('https://api.external-kyc-provider.com/v1'),
+}).superRefine((data, ctx) => {
+  if (data.NODE_ENV === 'production') {
+    if (data.JWT_SECRET.includes('change_in_production') || data.JWT_SECRET.length < 32) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'JWT_SECRET must be at least 32 characters and cannot use default dev placeholder in production',
+        path: ['JWT_SECRET'],
+      });
+    }
+    if (data.JWT_REFRESH_SECRET.includes('change_in_production') || data.JWT_REFRESH_SECRET.length < 32) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'JWT_REFRESH_SECRET must be at least 32 characters and cannot use default dev placeholder in production',
+        path: ['JWT_REFRESH_SECRET'],
+      });
+    }
+    if (data.KYC_ENCRYPTION_KEY.includes('super_secret') || data.KYC_ENCRYPTION_KEY.length < 32) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'KYC_ENCRYPTION_KEY must be at least 32 characters and cannot use default dev placeholder in production',
+        path: ['KYC_ENCRYPTION_KEY'],
+      });
+    }
+  }
 });
 
 const parsed = envSchema.safeParse(process.env);

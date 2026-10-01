@@ -29,6 +29,16 @@ export const errorHandler = (err, req, res, next) => {
     error = new AppError('Database validation failed', HttpStatus.UNPROCESSABLE_ENTITY, errors);
   }
 
+  // Handle Payload Too Large (Express body-parser 413)
+  if (err.type === 'entity.too.large' || err.status === 413 || err.statusCode === 413) {
+    error = new AppError('Request payload exceeds maximum allowed size (limit: 200KB)', HttpStatus.PAYLOAD_TOO_LARGE);
+  }
+
+  // Handle malformed JSON body
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    error = new AppError('Malformed JSON payload received', HttpStatus.BAD_REQUEST);
+  }
+
   // Convert JWT Errors
   if (err.name === 'JsonWebTokenError') {
     error = new AppError('Invalid authentication token. Please sign in again.', HttpStatus.UNAUTHORIZED);

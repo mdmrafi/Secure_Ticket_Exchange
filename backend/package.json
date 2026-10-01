@@ -20,7 +20,8 @@
     "test:messaging": "node scripts/test-socket-messaging.js",
     "test:jobs": "node scripts/test-inngest-jobs.js",
     "test:inngest": "node scripts/test-inngest-jobs.js",
-    "test:admin": "node scripts/test-admin-moderation.js"
+    "test:admin": "node scripts/test-admin-moderation.js",
+    "test:security": "node scripts/test-security-hardening.js"
   },
 
   "keywords": [
