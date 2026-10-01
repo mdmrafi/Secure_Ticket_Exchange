@@ -13,7 +13,7 @@ export const LoginPage = () => {
   const { login, switchRole } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -23,16 +23,27 @@ export const LoginPage = () => {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      // Demo authentication resolution
-      if (email.includes('admin')) {
-        switchRole('admin');
+    try {
+      const res = await login(email, password);
+      if (res.success) {
+        if (res.user?.role === 'ADMIN') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
-        switchRole('user');
+        setError(res.message || 'Invalid email or password');
       }
-      navigate('/dashboard');
-    }, 700);
+    } catch (err) {
+      setError(err.message || 'Login failed. Please verify credentials.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fillQuickLogin = (quickEmail) => {
+    setEmail(quickEmail);
+    setPassword('Password123!');
   };
 
   return (
@@ -85,6 +96,39 @@ export const LoginPage = () => {
             Sign In Securely
           </Button>
         </form>
+
+        {/* Quick Test Accounts */}
+        <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+          <div className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+            Quick-Fill Seeded Test Accounts:
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+            <button
+              type="button"
+              onClick={() => fillQuickLogin('user@safepass.com')}
+              className="py-1 px-2 rounded-lg bg-slate-900 border border-slate-700 hover:border-emerald-500 text-slate-300 hover:text-white transition text-center"
+            >
+              ✓ Verified
+            </button>
+            <button
+              type="button"
+              onClick={() => fillQuickLogin('unverified@safepass.com')}
+              className="py-1 px-2 rounded-lg bg-slate-900 border border-slate-700 hover:border-amber-500 text-slate-300 hover:text-white transition text-center"
+            >
+              ⚠ Unverified
+            </button>
+            <button
+              type="button"
+              onClick={() => fillQuickLogin('admin@safepass.com')}
+              className="py-1 px-2 rounded-lg bg-slate-900 border border-slate-700 hover:border-purple-500 text-slate-300 hover:text-white transition text-center"
+            >
+              🛡 Admin
+            </button>
+          </div>
+          <div className="text-[10px] text-slate-500 text-center">
+            Password for all: <code className="text-slate-400 font-mono">Password123!</code>
+          </div>
+        </div>
 
         {/* Security Messaging */}
         <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400 space-y-1">

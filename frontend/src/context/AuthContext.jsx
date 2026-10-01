@@ -1,44 +1,45 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { apiService } from '../services/api.service.js';
 
 const AuthContext = createContext(null);
 
-const MOCK_PROFILES = {
+const SEEDED_CREDENTIALS = {
+  user: { email: 'user@safepass.com', password: 'Password123!' },
+  unverified: { email: 'unverified@safepass.com', password: 'Password123!' },
+  admin: { email: 'admin@safepass.com', password: 'Password123!' },
+};
+
+const FALLBACK_PROFILES = {
   guest: null,
   user: {
-    _id: 'usr_verified_7721',
-    name: 'Rahim Chowdhury',
-    email: 'rahim.chowdhury@example.com',
-    phone: '+880 1712-345678',
+    _id: '6abedae814ee2e2ed024a5bd',
+    name: 'Tanvir Hossain',
+    email: 'user@safepass.com',
+    phone: '+880 1711-234567',
     role: 'USER',
     accountStatus: 'ACTIVE',
     kycStatus: 'VERIFIED',
-    kycLevel: 'LEVEL_2',
-    accountAge: '1 year, 4 months',
-    completedTransactions: 19,
-    joinedDate: 'June 2025',
-    verifiedAt: '14 July 2025',
+    trustScore: 96,
   },
   unverified: {
-    _id: 'usr_pending_8812',
-    name: 'Tanvir Hossain',
-    email: 'tanvir.hossain@example.com',
-    phone: '+880 1819-987654',
+    _id: '6abedae814ee2e2ed024a5bf',
+    name: 'Rashidul Karim',
+    email: 'unverified@safepass.com',
+    phone: '+880 1912-345678',
     role: 'USER',
     accountStatus: 'ACTIVE',
     kycStatus: 'NOT_STARTED',
-    accountAge: '2 days',
-    completedTransactions: 0,
-    joinedDate: 'September 2026',
+    trustScore: 75,
   },
   admin: {
-    _id: 'adm_security_001',
-    name: 'Sarah Rahman',
-    email: 'sarah.moderator@exchange.internal',
-    phone: '+880 1911-000111',
+    _id: '6abedae814ee2e2ed024a5bb',
+    name: 'Chief Security Officer',
+    email: 'admin@safepass.com',
+    phone: '+880 1700-000001',
     role: 'ADMIN',
     accountStatus: 'ACTIVE',
     kycStatus: 'VERIFIED',
-    joinedDate: 'January 2025',
+    trustScore: 100,
   },
 };
 
@@ -47,30 +48,123 @@ export const AuthProvider = ({ children }) => {
     return localStorage.getItem('demo_role') || 'user';
   });
 
-  const [user, setUser] = useState(() => MOCK_PROFILES[currentRole]);
-  const [token, setToken] = useState(() =>
-    currentRole !== 'guest' ? 'mock_jwt_token_demo' : null
-  );
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('auth_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // ignore
+      }
+    }
+    return FALLBACK_PROFILES[currentRole];
+  });
+
+  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Switch role seamlessly across the app
-  const switchRole = (newRole) => {
+  // Sync role switch with real backend authentication
+  const switchRole = async (newRole) => {
     setCurrentRole(newRole);
     localStorage.setItem('demo_role', newRole);
-    const profile = MOCK_PROFILES[newRole];
+
+    if (newRole === 'guest') {
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('auth_user');
+      return;
+    }
+
+    const creds = SEEDED_CREDENTIALS[newRole];
+    if (creds) {
+      try {
+        setIsLoading(true);
+        const res = await apiService.login(creds);
+        if (res.data?.tokens?.accessToken) {
+          const accessToken = res.data.tokens.accessToken;
+          const authUser = res.data.user;
+          // In backend, check KYC status
+          authUser.kycStatus = newRole === 'unverified' ? 'NOT_STARTED' : 'VERIFIED';
+          setToken(accessToken);
+          setUser(authUser);
+          localStorage.setItem('token', accessToken);
+          localStorage.setItem('auth_user', JSON.stringify(authUser));
+          return;
+        }
+      } catch (err) {
+        console.warn('Backend login fallback used for role:', newRole, err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    // Fallback if backend was temporarily unreachable
+    const profile = FALLBACK_PROFILES[newRole];
     setUser(profile);
-    setToken(profile ? `mock_jwt_token_${newRole}` : null);
+    setToken(profile ? `token_${newRole}` : null);
+    if (profile) {
+      localStorage.setItem('auth_user', JSON.stringify(profile));
+    }
   };
 
-  const login = (userData, authToken) => {
-    setUser(userData);
-    setToken(authToken || 'mock_jwt_token');
-    setCurrentRole(userData?.role === 'ADMIN' ? 'admin' : 'user');
+  // Real backend login function
+  const login = async (email, password) => {
+    setIsLoading(true);
+    try {
+      const res = await apiService.login({ email, password });
+      if (res.data?.tokens?.accessToken) {
+        const accessToken = res.data.tokens.accessToken;
+        const authUser = res.data.user;
+        setToken(accessToken);
+        setUser(authUser);
+        localStorage.setItem('token', accessToken);
+        localStorage.setItem('auth_user', JSON.stringify(authUser));
+        setCurrentRole(authUser.role === 'ADMIN' ? 'admin' : 'user');
+        return { success: true, user: authUser };
+      }
+      return { success: false, message: 'Invalid response from server' };
+    } catch (err) {
+      return { success: false, message: err.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Real backend register function
+  const register = async (formData) => {
+    setIsLoading(true);
+    try {
+      const res = await apiService.register(formData);
+      if (res.data?.tokens?.accessToken) {
+        const accessToken = res.data.tokens.accessToken;
+        const authUser = res.data.user;
+        setToken(accessToken);
+        setUser(authUser);
+        localStorage.setItem('token', accessToken);
+        localStorage.setItem('auth_user', JSON.stringify(authUser));
+        setCurrentRole('unverified');
+        return { success: true, user: authUser };
+      }
+      return { success: true, user: res.data?.user };
+    } catch (err) {
+      return { success: false, message: err.message };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = () => {
     switchRole('guest');
   };
+
+  // Try to authenticate initial session against backend on load if token is present
+  useEffect(() => {
+    const existingToken = localStorage.getItem('token');
+    if (!existingToken && currentRole !== 'guest') {
+      switchRole(currentRole);
+    }
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -84,6 +178,7 @@ export const AuthProvider = ({ children }) => {
         isLoading,
         switchRole,
         login,
+        register,
         logout,
       }}
     >

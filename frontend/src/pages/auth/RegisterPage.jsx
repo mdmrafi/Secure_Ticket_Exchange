@@ -18,6 +18,8 @@ export const RegisterPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
+  const { register } = useAuth();
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -46,7 +48,7 @@ export const RegisterPage = () => {
 
   const strength = getPasswordStrength(formData.password);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -61,10 +63,23 @@ export const RegisterPage = () => {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const res = await register({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+      });
+      if (res.success) {
+        navigate('/verify-email');
+      } else {
+        setError(res.message || 'Registration failed');
+      }
+    } catch (err) {
+      setError(err.message || 'Registration failed');
+    } finally {
       setIsLoading(false);
-      navigate('/email-verification');
-    }, 700);
+    }
   };
 
   return (

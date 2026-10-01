@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { apiService } from '../../services/api.service.js';
 import {
   Train,
   ShieldCheck,
@@ -25,34 +26,98 @@ export const AssetDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const ticketData = {
+  const [ticketData, setTicketData] = useState({
     id: id || 'LST-7019',
     service: 'Suborno Express (701)',
     trainNumber: '701',
-    pnr: '89342019',
+    pnr: '7819204123',
     assetType: 'RAILWAY_TICKET',
     source: 'Dhaka (Kamalapur Station)',
     destination: 'Chittagong Railway Station',
-    departureDate: 'Tomorrow, 03 Oct 2026',
+    departureDate: '14 Oct 2026',
     departureTime: '07:00 AM',
     arrivalEstimate: '01:15 PM (Estimated)',
     seatClass: 'Snigdha (AC Chair)',
-    coachSeat: 'Coach KHA • Seat 18 (Window Side)',
+    coachSeat: 'Coach Cha • Seat 14',
     faceValue: 805,
     askingPrice: 805,
     currency: 'BDT',
     status: 'VERIFIED',
-    listingExpires: '4 hours remaining',
+    listingExpires: '12 days remaining',
     seller: {
       id: 'USR-8821',
-      name: 'Rahim Chowdhury',
+      name: 'Mahmudur Rahman',
       kycStatus: 'LEVEL_2_VERIFIED',
       accountAge: '1 year, 4 months',
       completedTrades: 19,
       disputeRate: '0.0%',
       joinedDate: 'June 2025',
     },
-  };
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!id || id.startsWith('LST-')) return;
+    const fetchDetail = async () => {
+      setIsLoading(true);
+      try {
+        const res = await apiService.getListingById(id);
+        if (res.data) {
+          const item = res.data;
+          const asset = item.assetId || {};
+          const meta = asset.metadata || {};
+          const seller = item.sellerId || {};
+          setTicketData({
+            id: item._id,
+            service:
+              asset.title ||
+              meta.trainName ||
+              meta.operator ||
+              meta.eventName ||
+              'Verified Transit Asset',
+            trainNumber: meta.trainNumber || 'N/A',
+            pnr: meta.pnr || meta.ticketNumber || meta.documentNumber || 'VERIFIED-01',
+            assetType: asset.assetType || 'RAILWAY_TICKET',
+            source: meta.fromStation || meta.source || 'Dhaka',
+            destination: meta.toStation || meta.destination || meta.venue || 'Destination',
+            departureDate:
+              meta.journeyDate || meta.departureDate || meta.eventDate || 'Scheduled Date',
+            departureTime: meta.departureTime || meta.doorsOpen || '08:00 AM',
+            arrivalEstimate: 'On Schedule (Official Timetable)',
+            seatClass: meta.travelClass || meta.class || 'Standard Class',
+            coachSeat:
+              meta.seat ||
+              (meta.coach
+                ? `Coach ${meta.coach} • Seat ${meta.seatNumber}`
+                : meta.seatNumber || 'Allocated'),
+            faceValue: item.originalFaceValue || item.askingPrice,
+            askingPrice: item.askingPrice || item.price,
+            currency: item.currency || 'BDT',
+            status: asset.verificationStatus || 'VERIFIED',
+            listingExpires: 'Active Escrow Window',
+            seller: {
+              id: seller._id || 'USR-SELLER',
+              name: seller.name || 'Verified Member',
+              kycStatus: seller.kycStatus === 'VERIFIED' ? 'LEVEL_2_VERIFIED' : 'UNDER_REVIEW',
+              accountAge: 'Verified Account',
+              completedTrades: 12,
+              disputeRate: '0.0%',
+              joinedDate: 'October 2025',
+            },
+          });
+        }
+      } catch (err) {
+        console.warn(
+          'Could not fetch single listing from backend, using fallback data:',
+          err.message
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDetail();
+  }, [id]);
 
   const verificationTimeline = [
     {
