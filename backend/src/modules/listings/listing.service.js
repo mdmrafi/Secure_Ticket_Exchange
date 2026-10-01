@@ -18,6 +18,7 @@ import {
 import { KYCStatus } from '../kyc/kyc.constant.js';
 import { publishEvent } from '../../jobs/publisher.js';
 import { EventNames } from '../../common/constants/events.constant.js';
+import { getAssetAdapter, hasAssetAdapter } from '../assets/adapters/index.js';
 
 // Protected ticket identity and asset fields that sellers are strictly prohibited from mutating
 export const PROTECTED_TICKET_IDENTITY_FIELDS = [
@@ -130,8 +131,15 @@ export class ListingService {
       );
     }
 
-    // Check transferability
-    if (asset.isTransferable === false) {
+    // Resolve asset adapter for generic policy enforcement
+    const adapter = hasAssetAdapter(asset.assetType) ? getAssetAdapter(asset.assetType) : null;
+
+    // Check transferability (via adapter policy or asset flag)
+    if (adapter && !adapter.transferPolicy.isTransferable(asset)) {
+      throw new BadRequestError(
+        'Asset is non-transferable and cannot be listed on the marketplace'
+      );
+    } else if (asset.isTransferable === false) {
       throw new BadRequestError(
         'Asset is non-transferable and cannot be listed on the marketplace'
       );
@@ -160,12 +168,32 @@ export class ListingService {
       throw new BadRequestError('A valid positive asking price is required');
     }
 
-    // 7. High-trust KYC listing verification guard
+    // Anti-scalping & price validation via adapter policy
+    if (adapter) {
+      const priceValidation = adapter.transferPolicy.validateListingPrice(asset, askingPrice);
+      if (!priceValidation.allowed) {
+        throw new BadRequestError(priceValidation.reason || 'Invalid asking price');
+      }
+    }
+
+    // 7. High-trust KYC listing verification guard (via adapter policy or default threshold)
     const isHighTrust = data.isHighTrust || asset.metadata?.isHighTrust || askingPrice >= 5000;
-    if (isHighTrust && seller.kycStatus !== KYCStatus.VERIFIED) {
+    const requiresKyc = adapter
+      ? adapter.transferPolicy.isKycRequired(asset, askingPrice, seller)
+      : isHighTrust;
+
+    if ((requiresKyc || isHighTrust) && seller.kycStatus !== KYCStatus.VERIFIED) {
       throw new ForbiddenError(
         'Identity verification required: You must complete KYC verification before you can create high-trust asset listings.'
       );
+    }
+
+    // Delegate listing payload validation to adapter validator
+    if (adapter) {
+      const listingVal = adapter.validator.validateListing(asset, data, seller);
+      if (!listingVal.valid) {
+        throw new BadRequestError(listingVal.errors.join(', '));
+      }
     }
 
     const status = data.status || ListingStatus.ACTIVE;
@@ -258,21 +286,25 @@ export class ListingService {
    * @param {string} userRole
    */
   async updateListing(id, userId, updateData, userRole = 'USER') {
-    // 1. Guard against modifications to protected ticket identity fields
-    const attemptedProtected = PROTECTED_TICKET_IDENTITY_FIELDS.filter(
-      (field) => field in updateData
-    );
+    // 1. Fetch existing listing
+    const listing = await this.repo.findById(id);
+    if (!listing) {
+      throw new NotFoundError('Listing not found');
+    }
+
+    // 2. Guard against modifications to protected identity fields (via adapter or defaults)
+    const assetType = listing.assetId?.assetType;
+    const adapter = assetType && hasAssetAdapter(assetType) ? getAssetAdapter(assetType) : null;
+    const protectedFields = adapter
+      ? adapter.transferPolicy.getProtectedFields()
+      : PROTECTED_TICKET_IDENTITY_FIELDS;
+
+    const attemptedProtected = protectedFields.filter((field) => field in updateData);
 
     if (attemptedProtected.length > 0) {
       throw new BadRequestError(
         `Modification of protected ticket identity or asset fields is strictly prohibited: [${attemptedProtected.join(', ')}]`
       );
-    }
-
-    // 2. Fetch existing listing
-    const listing = await this.repo.findById(id);
-    if (!listing) {
-      throw new NotFoundError('Listing not found');
     }
 
     // 3. Ownership / authorization check

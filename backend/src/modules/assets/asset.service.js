@@ -20,6 +20,7 @@ import {
 import { logger } from '../../config/logger.config.js';
 import { publishEvent } from '../../jobs/publisher.js';
 import { EventNames } from '../../common/constants/events.constant.js';
+import { getAssetAdapter, hasAssetAdapter } from './adapters/index.js';
 
 export class AssetService {
   constructor(repo = assetRepository) {
@@ -28,27 +29,61 @@ export class AssetService {
 
   /**
    * Create a new Asset
-   * Uses generic Asset domain abstraction.
+   * Uses generic AssetAdapter plugin architecture.
    *
    * @param {string} ownerId
    * @param {object} assetData
    */
   async createAsset(ownerId, assetData) {
-    // 1. Instantiate typed domain model (RailwayTicket, BusTicket, EventTicket, Document)
-    const domainAsset = createAssetDomain({
-      ...assetData,
-      ownerId,
-      status: assetData.status || AssetStatus.DRAFT,
-      verificationStatus: assetData.verificationStatus || VerificationStatus.NOT_REQUESTED,
-    });
+    let payload;
 
-    // 2. Validate domain metadata
-    const validation = domainAsset.validateMetadata();
-    if (!validation.valid) {
-      throw new BadRequestError(`Invalid asset metadata: ${validation.errors.join(', ')}`);
+    if (hasAssetAdapter(assetData.assetType)) {
+      const adapter = getAssetAdapter(assetData.assetType);
+      const prepared = adapter.prepareAssetData({
+        ...assetData,
+        ownerId,
+        status: assetData.status || AssetStatus.DRAFT,
+        verificationStatus: assetData.verificationStatus || VerificationStatus.NOT_REQUESTED,
+      });
+
+      const validation = adapter.validateAsset(prepared);
+      if (!validation.valid) {
+        throw new BadRequestError(`Invalid asset metadata: ${validation.errors.join(', ')}`);
+      }
+
+      payload = {
+        ownerId,
+        assetType: prepared.assetType,
+        status: prepared.status,
+        verificationStatus: prepared.verificationStatus,
+        title: prepared.title,
+        description: prepared.description || '',
+        uniqueAssetIdentifier: prepared.uniqueAssetIdentifier,
+        originalValue:
+          prepared.originalValue !== undefined
+            ? prepared.originalValue
+            : Number(prepared.metadata?.fare || prepared.metadata?.originalFaceValue || 0),
+        currency: prepared.currency || 'BDT',
+        metadata: prepared.metadata,
+        documents: prepared.documents || [],
+        isTransferable: prepared.isTransferable !== false,
+      };
+    } else {
+      // Fallback to legacy domain model
+      const domainAsset = createAssetDomain({
+        ...assetData,
+        ownerId,
+        status: assetData.status || AssetStatus.DRAFT,
+        verificationStatus: assetData.verificationStatus || VerificationStatus.NOT_REQUESTED,
+      });
+
+      const validation = domainAsset.validateMetadata();
+      if (!validation.valid) {
+        throw new BadRequestError(`Invalid asset metadata: ${validation.errors.join(', ')}`);
+      }
+
+      payload = domainAsset.toPersistence();
     }
-
-    const payload = domainAsset.toPersistence();
 
     // 3. Prevent duplicate unique identifier for this asset type
     const existing = await this.repo.findByIdentifier(

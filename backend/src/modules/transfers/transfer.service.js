@@ -22,6 +22,7 @@ import {
 } from '../../common/errors/index.js';
 import { publishEvent } from '../../jobs/publisher.js';
 import { EventNames } from '../../common/constants/events.constant.js';
+import { getAssetAdapter, hasAssetAdapter } from '../assets/adapters/index.js';
 
 /**
  * Strict State Transition Matrix for Asset Transfers
@@ -129,10 +130,18 @@ export class TransferService {
       toUser = await User.findById(context.toUserId);
     }
 
+    let activeProvider = this.provider;
+    if (hasAssetAdapter(asset.assetType)) {
+      const adapter = getAssetAdapter(asset.assetType);
+      if (adapter.transferProvider) {
+        activeProvider = adapter.transferProvider;
+      }
+    }
+
     const result = TransferPolicy.evaluateEligibility(asset, {
       fromUser,
       toUser,
-      provider: this.provider,
+      provider: activeProvider,
     });
 
     return {
@@ -226,10 +235,18 @@ export class TransferService {
     }
 
     // 5. Evaluate Legal & Policy Transferability (TransferPolicy)
+    let activeProvider = this.provider;
+    if (hasAssetAdapter(asset.assetType)) {
+      const adapter = getAssetAdapter(asset.assetType);
+      if (adapter.transferProvider) {
+        activeProvider = adapter.transferProvider;
+      }
+    }
+
     const eligibility = TransferPolicy.evaluateEligibility(asset, {
       fromUser,
       toUser,
-      provider: this.provider,
+      provider: activeProvider,
     });
 
     if (!eligibility.eligible) {
@@ -240,7 +257,7 @@ export class TransferService {
         toUserId: toUser._id,
         transactionId: transaction ? transaction._id : null,
         status: TransferRequestStatus.NOT_ELIGIBLE,
-        provider: this.provider.providerId,
+        provider: activeProvider.providerId,
         eligibilityResult: eligibility,
         rejectionReason: eligibility.reason,
         metadata: {
@@ -284,7 +301,7 @@ export class TransferService {
       toUserId: toUser._id,
       transactionId: transaction ? transaction._id : null,
       status: TransferRequestStatus.REQUESTED,
-      provider: this.provider.providerId,
+      provider: activeProvider.providerId,
       eligibilityResult: eligibility,
       metadata,
     });
@@ -424,9 +441,17 @@ export class TransferService {
       }
     }
 
-    // Step 3: Call Transfer Provider
+    // Step 3: Call Transfer Provider (via AssetAdapter if registered, or default provider)
     try {
-      const providerResult = await this.provider.transfer(asset, fromUser, toUser, options);
+      let activeProvider = this.provider;
+      if (hasAssetAdapter(asset.assetType)) {
+        const adapter = getAssetAdapter(asset.assetType);
+        if (adapter.transferProvider) {
+          activeProvider = adapter.transferProvider;
+        }
+      }
+
+      const providerResult = await activeProvider.transfer(asset, fromUser, toUser, options);
 
       if (!providerResult.success) {
         // Step 4A: Provider failure -> Rollback handling & transition to REJECTED

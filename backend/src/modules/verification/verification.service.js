@@ -12,6 +12,7 @@ import { verificationEngine } from './engine/verification-engine.js';
 import { logger } from '../../config/logger.config.js';
 import { publishEvent } from '../../jobs/publisher.js';
 import { EventNames } from '../../common/constants/events.constant.js';
+import { getAssetAdapter, hasAssetAdapter } from '../assets/adapters/index.js';
 
 export class VerificationService {
   constructor(
@@ -33,9 +34,10 @@ export class VerificationService {
       throw new NotFoundError('Asset not found');
     }
 
-    // If it's a railway ticket, execute multi-layer verification immediately
-    if (asset.assetType === AssetTypes.RAILWAY_TICKET) {
-      return this.verifyRailwayTicket(assetId, { userId: requestedBy }, options);
+    // If an asset adapter exists for this asset type, execute verification through the adapter
+    if (hasAssetAdapter(asset.assetType)) {
+      const adapter = getAssetAdapter(asset.assetType);
+      return this.verifyAssetWithAdapter(asset, adapter, { userId: requestedBy }, options);
     }
 
     const verification = await this.repo.create({
@@ -60,6 +62,103 @@ export class VerificationService {
     });
 
     return verification;
+  }
+
+  /**
+   * Generic verification method executing through the registered AssetAdapter
+   *
+   * @param {object} asset
+   * @param {import('../assets/adapters/interfaces/asset-adapter.interface.js').AssetAdapter} adapter
+   * @param {object} requestingUser
+   * @param {object} [options={}]
+   */
+  async verifyAssetWithAdapter(asset, adapter, requestingUser, options = {}) {
+    // If it's a railway ticket and the engine is requested, keep the existing multi-layer engine
+    if (asset.assetType === AssetTypes.RAILWAY_TICKET) {
+      return this.verifyRailwayTicket(asset._id || asset.id, requestingUser, options);
+    }
+
+    // Ownership check (owner or admin)
+    if (requestingUser) {
+      const assetOwnerId = asset.ownerId?._id
+        ? asset.ownerId._id.toString()
+        : asset.ownerId?.toString();
+      const currentUserId = requestingUser.userId || requestingUser._id || requestingUser.id;
+
+      if (
+        assetOwnerId &&
+        currentUserId &&
+        assetOwnerId !== currentUserId.toString() &&
+        requestingUser.role !== 'ADMIN'
+      ) {
+        throw new ForbiddenError(
+          'Forbidden: You can only request verification for your own assets'
+        );
+      }
+    }
+
+    logger.info(
+      { assetId: asset._id, assetType: asset.assetType, userId: requestingUser?.userId },
+      'Running generic adapter verification'
+    );
+
+    const result = await adapter.verifier.verify(asset, options);
+
+    const updatePayload = {
+      verificationStatus: result.status,
+    };
+
+    if (result.status === VerificationStatus.VERIFIED) {
+      updatePayload.status = AssetStatus.VERIFIED;
+      updatePayload.verifiedAt = new Date();
+    } else if (
+      result.status === VerificationStatus.FAILED ||
+      result.status === VerificationStatus.SUSPICIOUS
+    ) {
+      updatePayload.status = AssetStatus.REJECTED;
+    } else if (result.status === VerificationStatus.MANUAL_REVIEW) {
+      updatePayload.status = AssetStatus.PENDING_VERIFICATION;
+    }
+
+    await this.assetRepo.updateById(asset._id, updatePayload);
+
+    // Record verification log in database
+    const verificationRecord = await this.repo.create({
+      assetId: asset._id,
+      requestedBy: requestingUser?.userId || asset.ownerId,
+      status: result.status,
+      confidenceScore: result.confidenceScore || 0,
+      checks: (result.checks || []).map((c) => ({
+        checkType: c.checkType || c.layer || 'GENERIC_CHECK',
+        status: c.status === 'PASSED' ? 'PASSED' : c.status === 'FAILED' ? 'FAILED' : 'PENDING',
+        score: c.score || 0,
+        details: { ...(c.details || {}), reason: c.reason },
+        performedAt: new Date(),
+      })),
+      fraudFlags: result.fraudFlags || [],
+      notes: result.details?.notes || 'Adapter verification completed',
+      completedAt: new Date(),
+    });
+
+    if (result.status === VerificationStatus.VERIFIED) {
+      publishEvent(
+        EventNames.ASSET_VERIFIED,
+        {
+          assetId: asset._id.toString(),
+          ownerId: asset.ownerId?._id?.toString() || asset.ownerId?.toString(),
+          verificationId: verificationRecord._id.toString(),
+          status: result.status,
+          assetType: asset.assetType,
+          confidenceScore: result.confidenceScore,
+        },
+        { id: requestingUser?.userId || asset.ownerId }
+      ).catch(() => {});
+    }
+
+    return {
+      ...result,
+      verificationId: verificationRecord._id,
+    };
   }
 
   /**
@@ -161,8 +260,9 @@ export class VerificationService {
       throw new NotFoundError('Asset not found');
     }
 
-    if (asset.assetType === AssetTypes.RAILWAY_TICKET) {
-      return this.verifyRailwayTicket(assetId, { userId: asset.ownerId });
+    if (hasAssetAdapter(asset.assetType)) {
+      const adapter = getAssetAdapter(asset.assetType);
+      return this.verifyAssetWithAdapter(asset, adapter, { userId: asset.ownerId });
     }
 
     const verifier = getAssetVerifier(asset.assetType);

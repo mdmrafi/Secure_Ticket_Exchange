@@ -3,6 +3,7 @@ import {
   VerificationStatus,
   AssetStatus,
 } from '../../common/constants/asset-types.constant.js';
+import { hasAssetAdapter, getAssetAdapter } from '../assets/adapters/index.js';
 
 /**
  * TransferPolicy
@@ -114,6 +115,11 @@ export class TransferPolicy {
    * @returns {boolean}
    */
   static allowsIdentityModification(asset, provider = null) {
+    if (hasAssetAdapter(asset?.assetType)) {
+      const adapter = getAssetAdapter(asset.assetType);
+      return adapter.transferPolicy.allowsDirectIdentityModification(asset);
+    }
+
     if (!this.isRailwayTicket(asset)) {
       // Non-railway assets allow attendee/ticket holder identity updates
       return true;
@@ -195,27 +201,53 @@ export class TransferPolicy {
       };
     }
 
-    // 4. Asset type policy check
-    const policy = this.getPolicyForType(asset.assetType);
-
-    if (!policy.legallyTransferable) {
-      // If asset is not legally transferable by default (e.g. RAILWAY_TICKET or DOCUMENT),
-      // it can ONLY be transferred if an authorized provider explicitly enables it
-      const providerSupports =
-        provider &&
-        ((this.isRailwayTicket(asset) && provider.isAuthorizedRailwayProvider) ||
-          (provider.supports && provider.supports(asset)));
-
-      if (!providerSupports) {
+    // 4. Asset type policy check (delegates to adapter if registered)
+    let requiresAuthorizedProvider = false;
+    if (hasAssetAdapter(asset.assetType)) {
+      const adapter = getAssetAdapter(asset.assetType);
+      requiresAuthorizedProvider = adapter.transferPolicy.requiresAuthorizedProvider(asset);
+      const adapterEligibility = adapter.transferPolicy.checkTransferEligibility(
+        asset,
+        fromUser,
+        toUser,
+        { ...context, provider }
+      );
+      if (!adapterEligibility.eligible) {
         return {
           eligible: false,
           reason:
-            policy.description ||
-            `${asset.assetType} is not legally transferable under standard policy`,
-          policyCode: 'LEGALLY_NON_TRANSFERABLE',
-          requiresAuthorizedProvider: policy.requiresAuthorizedProvider,
-          supportsIdentityModification: false,
+            adapterEligibility.reason ||
+            (adapterEligibility.reasons && adapterEligibility.reasons.join(', ')) ||
+            `${asset.assetType} is not legally transferable under current policy`,
+          policyCode: adapterEligibility.policyCode || 'LEGALLY_NON_TRANSFERABLE',
+          requiresAuthorizedProvider,
+          supportsIdentityModification:
+            adapter.transferPolicy.allowsDirectIdentityModification(asset),
         };
+      }
+    } else {
+      const policy = this.getPolicyForType(asset.assetType);
+      requiresAuthorizedProvider = policy.requiresAuthorizedProvider;
+
+      if (!policy.legallyTransferable) {
+        // If asset is not legally transferable by default (e.g. RAILWAY_TICKET or DOCUMENT),
+        // it can ONLY be transferred if an authorized provider explicitly enables it
+        const providerSupports =
+          provider &&
+          ((this.isRailwayTicket(asset) && provider.isAuthorizedRailwayProvider) ||
+            (provider.supports && provider.supports(asset)));
+
+        if (!providerSupports) {
+          return {
+            eligible: false,
+            reason:
+              policy.description ||
+              `${asset.assetType} is not legally transferable under standard policy`,
+            policyCode: 'LEGALLY_NON_TRANSFERABLE',
+            requiresAuthorizedProvider,
+            supportsIdentityModification: false,
+          };
+        }
       }
     }
 
@@ -229,7 +261,7 @@ export class TransferPolicy {
           eligible: false,
           reason: 'Cannot transfer asset to oneself',
           policyCode: 'SELF_TRANSFER_PROHIBITED',
-          requiresAuthorizedProvider: policy.requiresAuthorizedProvider,
+          requiresAuthorizedProvider,
           supportsIdentityModification: false,
         };
       }
@@ -239,7 +271,7 @@ export class TransferPolicy {
           eligible: false,
           reason: 'Suspended users cannot participate in asset transfers',
           policyCode: 'USER_SUSPENDED',
-          requiresAuthorizedProvider: policy.requiresAuthorizedProvider,
+          requiresAuthorizedProvider,
           supportsIdentityModification: false,
         };
       }
@@ -252,7 +284,7 @@ export class TransferPolicy {
       eligible: true,
       reason: 'Asset meets all transferability policies and requirements',
       policyCode: 'ELIGIBLE',
-      requiresAuthorizedProvider: policy.requiresAuthorizedProvider,
+      requiresAuthorizedProvider,
       supportsIdentityModification: allowsIdMod,
     };
   }

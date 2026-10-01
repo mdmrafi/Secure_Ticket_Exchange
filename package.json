@@ -20,7 +20,8 @@
     "test:security": "npm run test:security --prefix backend",
     "test:admin": "npm run test:admin --prefix backend",
     "test:jobs": "npm run test:jobs --prefix backend",
-    "test:transactions": "npm run test:transactions --prefix backend"
+    "test:transactions": "npm run test:transactions --prefix backend",
+    "test:generic": "npm run test:generic --prefix backend"
   },
   "devDependencies": {
     "prettier": "^3.9.9"

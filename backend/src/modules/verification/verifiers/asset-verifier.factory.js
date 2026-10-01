@@ -1,6 +1,7 @@
 import { RailwayTicketVerifier } from './railway-ticket.verifier.js';
 import { AssetTypes, VerificationStatus } from '../../../common/constants/asset-types.constant.js';
 import { logger } from '../../../config/logger.config.js';
+import { getAssetAdapter, hasAssetAdapter } from '../../assets/adapters/index.js';
 
 // Verifier registry
 const verifierRegistry = new Map();
@@ -26,6 +27,13 @@ export const getAssetVerifier = (assetType) => {
 
   if (verifier) {
     return verifier;
+  }
+
+  if (hasAssetAdapter(assetType)) {
+    const adapter = getAssetAdapter(assetType);
+    if (adapter.verifier) {
+      return adapter.verifier;
+    }
   }
 
   logger.warn(

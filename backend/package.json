@@ -13,7 +13,7 @@
     "format": "prettier --write \"src/**/*.js\"",
     "format:check": "prettier --check \"src/**/*.js\"",
     "audit": "npm audit",
-    "test:all": "node scripts/test-db-connection.js && node scripts/test-payment-abstraction.js && node scripts/test-security-hardening.js && node scripts/test-admin-moderation.js && node scripts/test-inngest-jobs.js",
+    "test:all": "node scripts/test-db-connection.js && node scripts/test-payment-abstraction.js && node scripts/test-security-hardening.js && node scripts/test-admin-moderation.js && node scripts/test-inngest-jobs.js && node scripts/test-generic-asset-exchange.js",
     "test:db": "node scripts/test-db-connection.js",
     "test:kyc": "node scripts/test-kyc-module.js",
     "test:assets": "node scripts/test-asset-module.js",
@@ -29,7 +29,8 @@
     "test:inngest": "node scripts/test-inngest-jobs.js",
     "test:admin": "node scripts/test-admin-moderation.js",
     "test:security": "node scripts/test-security-hardening.js",
-    "test:payment": "node scripts/test-payment-abstraction.js"
+    "test:payment": "node scripts/test-payment-abstraction.js",
+    "test:generic": "node scripts/test-generic-asset-exchange.js"
   },
   "keywords": [
     "asset-exchange",

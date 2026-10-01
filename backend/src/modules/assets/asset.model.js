@@ -16,10 +16,6 @@ const assetSchema = new mongoose.Schema(
     },
     assetType: {
       type: String,
-      enum: {
-        values: Object.values(AssetTypes),
-        message: '{VALUE} is not a supported asset type',
-      },
       required: [true, 'Asset type is required'],
       index: true,
     },
