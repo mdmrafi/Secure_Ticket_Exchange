@@ -1,6 +1,9 @@
+import mongoose from 'mongoose';
 import { listingRepository } from './listing.repository.js';
 import { assetRepository } from '../assets/asset.repository.js';
 import { User } from '../users/user.model.js';
+import { Listing } from './listing.model.js';
+import { Reservation, ReservationStatus } from './reservation.model.js';
 import {
   NotFoundError,
   ForbiddenError,
@@ -370,6 +373,344 @@ export class ListingService {
 
     const updated = await this.repo.updateById(id, { status: ListingStatus.CANCELLED });
     return updated;
+  }
+
+  /**
+   * Atomically reserve a listing for a buyer.
+   *
+   * Business Rules Enforced:
+   * 1. Suspended users cannot reserve listings
+   * 2. Seller cannot reserve their own listing
+   * 3. Only ACTIVE listings can be reserved (CANCELLED, SOLD, EXPIRED, DRAFT rejected)
+   * 4. Race condition prevention: exactly one buyer can atomically transition status ACTIVE -> RESERVED
+   * 5. Partial unique compound index on Reservation enforces at database layer that only one ACTIVE reservation can exist
+   * 6. Multi-document ACID transactions with MongoDB session
+   * 7. Automatic lazy expiry: stale reservations (> expiresAt) are cleared and released
+   *
+   * @param {string} listingId
+   * @param {string} buyerId
+   * @param {object} [options]
+   * @returns {Promise<{ reservation: object, listing: object }>}
+   */
+  async reserveListing(listingId, buyerId, options = {}) {
+    // 1. Verify buyer account status
+    const buyer = await User.findById(buyerId).select('accountStatus');
+    if (!buyer) {
+      throw new NotFoundError('Buyer account not found');
+    }
+    if (buyer.accountStatus === 'SUSPENDED') {
+      throw new ForbiddenError('Suspended users cannot reserve listings');
+    }
+    if (buyer.accountStatus === 'DEACTIVATED') {
+      throw new ForbiddenError('Deactivated user account cannot reserve listings');
+    }
+
+    // 2. Fetch listing to validate eligibility
+    const listing = await this.repo.findById(listingId);
+    if (!listing) {
+      throw new NotFoundError('Listing not found');
+    }
+
+    const sellerIdStr = listing.sellerId?._id
+      ? listing.sellerId._id.toString()
+      : listing.sellerId.toString();
+
+    // Rule: Seller cannot reserve own listing
+    if (sellerIdStr === buyerId.toString()) {
+      throw new BadRequestError('Seller cannot reserve their own listing');
+    }
+
+    // Rule: Cancelled / Sold / Expired / Draft listings cannot be reserved
+    if (listing.status === ListingStatus.CANCELLED) {
+      throw new BadRequestError('Cancelled listings cannot be reserved');
+    }
+    if (listing.status === ListingStatus.SOLD || listing.status === 'COMPLETED') {
+      throw new BadRequestError('Cannot reserve a sold listing');
+    }
+    if (listing.status === ListingStatus.EXPIRED) {
+      throw new BadRequestError('Cannot reserve an expired listing');
+    }
+    if (listing.status === ListingStatus.DRAFT) {
+      throw new BadRequestError('Cannot reserve a draft listing');
+    }
+
+    // Lazy expiration check for existing reservation
+    if (listing.status === ListingStatus.RESERVED || listing.status === 'PENDING_ESCROW') {
+      const activeRes = await Reservation.findOne({
+        listingId: listing._id,
+        status: ReservationStatus.ACTIVE,
+      });
+
+      if (activeRes) {
+        if (activeRes.expiresAt > new Date()) {
+          // Still actively reserved and not expired
+          if (activeRes.buyerId.toString() === buyerId.toString()) {
+            return {
+              reservation: activeRes,
+              listing,
+              alreadyReserved: true,
+            };
+          }
+          throw new ConflictError('Listing is already reserved by another buyer');
+        } else {
+          // Stale reservation has expired: mark it EXPIRED so it can be reclaimed
+          activeRes.status = ReservationStatus.EXPIRED;
+          await activeRes.save();
+        }
+      }
+    }
+
+    const durationMinutes = options.durationMinutes || 15;
+    const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000);
+
+    // 3. Atomically acquire lock and create reservation using MongoDB ACID Session
+    let session = null;
+    try {
+      session = await mongoose.startSession();
+    } catch {
+      session = null;
+    }
+
+    if (session) {
+      try {
+        let result = null;
+        await session.withTransaction(async () => {
+          // Atomic conditional update on Listing: must be ACTIVE (or reclaimed from expired RESERVED)
+          const updatedListing = await Listing.findOneAndUpdate(
+            {
+              _id: listingId,
+              $or: [
+                { status: ListingStatus.ACTIVE },
+                { status: ListingStatus.RESERVED },
+              ],
+            },
+            { $set: { status: ListingStatus.RESERVED } },
+            { new: true, session }
+          );
+
+          if (!updatedListing) {
+            throw new ConflictError('Listing is no longer available for reservation');
+          }
+
+          // Check for any concurrent active reservation within this transaction session
+          const conflicting = await Reservation.findOne({
+            listingId,
+            status: ReservationStatus.ACTIVE,
+          }).session(session);
+
+          if (conflicting) {
+            if (conflicting.expiresAt > new Date()) {
+              throw new ConflictError('Listing is already reserved by another buyer');
+            } else {
+              conflicting.status = ReservationStatus.EXPIRED;
+              await conflicting.save({ session });
+            }
+          }
+
+          // Create new reservation document
+          const [newReservation] = await Reservation.create(
+            [
+              {
+                listingId,
+                buyerId,
+                expiresAt,
+                status: ReservationStatus.ACTIVE,
+              },
+            ],
+            { session }
+          );
+
+          result = {
+            reservation: newReservation,
+            listing: updatedListing,
+          };
+        });
+
+        return result;
+      } catch (err) {
+        if (err.code === 11000 || (err.name === 'MongoServerError' && err.code === 11000)) {
+          throw new ConflictError('Listing is already reserved by another buyer');
+        }
+        throw err;
+      } finally {
+        await session.endSession();
+      }
+    } else {
+      // Standalone atomic conditional fallback
+      const updatedListing = await Listing.findOneAndUpdate(
+        {
+          _id: listingId,
+          $or: [{ status: ListingStatus.ACTIVE }, { status: ListingStatus.RESERVED }],
+        },
+        { $set: { status: ListingStatus.RESERVED } },
+        { new: true }
+      );
+
+      if (!updatedListing) {
+        throw new ConflictError('Listing is no longer available for reservation');
+      }
+
+      try {
+        const newReservation = await Reservation.create({
+          listingId,
+          buyerId,
+          expiresAt,
+          status: ReservationStatus.ACTIVE,
+        });
+
+        return {
+          reservation: newReservation,
+          listing: updatedListing,
+        };
+      } catch (err) {
+        await Listing.findByIdAndUpdate(listingId, { status: ListingStatus.ACTIVE });
+        if (err.code === 11000 || (err.name === 'MongoServerError' && err.code === 11000)) {
+          throw new ConflictError('Listing is already reserved by another buyer');
+        }
+        throw err;
+      }
+    }
+  }
+
+  /**
+   * Release an active reservation and revert listing status back to ACTIVE.
+   *
+   * Business Rules Enforced:
+   * 1. Only reserving buyer, listing seller, or admin can release
+   * 2. Atomically marks reservation as RELEASED and listing as ACTIVE
+   *
+   * @param {string} listingId
+   * @param {string} userId
+   * @param {string} userRole
+   * @param {string} [reason]
+   */
+  async releaseReservation(listingId, userId, userRole = 'USER', reason = null) {
+    let session = null;
+    try {
+      session = await mongoose.startSession();
+    } catch {
+      session = null;
+    }
+
+    if (session) {
+      try {
+        let result = null;
+        await session.withTransaction(async () => {
+          // 1. Find active reservation
+          const reservation = await Reservation.findOne({
+            listingId,
+            status: ReservationStatus.ACTIVE,
+          }).session(session);
+
+          if (!reservation) {
+            throw new NotFoundError('No active reservation found for this listing');
+          }
+
+          // 2. Fetch listing
+          const listing = await Listing.findById(listingId).session(session);
+          if (!listing) {
+            throw new NotFoundError('Listing not found');
+          }
+
+          // 3. Authorization check
+          const isBuyer = reservation.buyerId.toString() === userId.toString();
+          const isSeller = listing.sellerId.toString() === userId.toString();
+          const isAdmin = userRole === 'ADMIN';
+
+          if (!isBuyer && !isSeller && !isAdmin) {
+            throw new ForbiddenError('You are not authorized to release this reservation');
+          }
+
+          // 4. Update reservation
+          reservation.status = ReservationStatus.RELEASED;
+          reservation.releasedAt = new Date();
+          reservation.releaseReason =
+            reason || (isBuyer ? 'Buyer released reservation' : 'Released by seller/admin');
+          await reservation.save({ session });
+
+          // 5. Revert listing status to ACTIVE
+          const updatedListing = await Listing.findOneAndUpdate(
+            { _id: listingId, status: ListingStatus.RESERVED },
+            { $set: { status: ListingStatus.ACTIVE } },
+            { new: true, session }
+          );
+
+          result = {
+            reservation,
+            listing: updatedListing || listing,
+          };
+        });
+
+        return result;
+      } finally {
+        await session.endSession();
+      }
+    } else {
+      const reservation = await Reservation.findOne({
+        listingId,
+        status: ReservationStatus.ACTIVE,
+      });
+
+      if (!reservation) {
+        throw new NotFoundError('No active reservation found for this listing');
+      }
+
+      const listing = await Listing.findById(listingId);
+      if (!listing) {
+        throw new NotFoundError('Listing not found');
+      }
+
+      const isBuyer = reservation.buyerId.toString() === userId.toString();
+      const isSeller = listing.sellerId.toString() === userId.toString();
+      const isAdmin = userRole === 'ADMIN';
+
+      if (!isBuyer && !isSeller && !isAdmin) {
+        throw new ForbiddenError('You are not authorized to release this reservation');
+      }
+
+      reservation.status = ReservationStatus.RELEASED;
+      reservation.releasedAt = new Date();
+      reservation.releaseReason =
+        reason || (isBuyer ? 'Buyer released reservation' : 'Released by seller/admin');
+      await reservation.save();
+
+      const updatedListing = await Listing.findOneAndUpdate(
+        { _id: listingId, status: ListingStatus.RESERVED },
+        { $set: { status: ListingStatus.ACTIVE } },
+        { new: true }
+      );
+
+      return {
+        reservation,
+        listing: updatedListing || listing,
+      };
+    }
+  }
+
+  /**
+   * Sweep and expire all stale reservations where expiresAt <= now
+   */
+  async expireStaleReservations() {
+    const staleReservations = await Reservation.find({
+      status: ReservationStatus.ACTIVE,
+      expiresAt: { $lte: new Date() },
+    });
+
+    const expiredListings = [];
+    for (const res of staleReservations) {
+      res.status = ReservationStatus.EXPIRED;
+      await res.save();
+      await Listing.findOneAndUpdate(
+        { _id: res.listingId, status: ListingStatus.RESERVED },
+        { $set: { status: ListingStatus.ACTIVE } }
+      );
+      expiredListings.push(res.listingId);
+    }
+
+    return {
+      expiredCount: staleReservations.length,
+      expiredListings,
+    };
   }
 }
 

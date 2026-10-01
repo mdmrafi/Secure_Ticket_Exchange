@@ -57,3 +57,27 @@ export const listingIdParamSchema = z.object({
     id: z.string().min(1, 'Listing ID is required'),
   }),
 });
+
+export const reserveListingSchema = z.object({
+  params: z.object({
+    id: z.string().min(1, 'Listing ID is required'),
+  }),
+  body: z
+    .object({
+      durationMinutes: z.number().int().min(1).max(60).optional().default(15),
+    })
+    .optional()
+    .default({ durationMinutes: 15 }),
+});
+
+export const releaseListingSchema = z.object({
+  params: z.object({
+    id: z.string().min(1, 'Listing ID is required'),
+  }),
+  body: z
+    .object({
+      reason: z.string().max(500, 'Reason cannot exceed 500 characters').optional(),
+    })
+    .optional(),
+});
+

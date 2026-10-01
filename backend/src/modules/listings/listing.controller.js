@@ -69,6 +69,33 @@ export class ListingController {
     );
     return ApiResponse.success(res, listing, 'Listing cancelled successfully');
   });
+
+  /**
+   * Atomically reserve a listing for purchase
+   * POST /api/v1/listings/:id/reserve
+   */
+  reserve = asyncHandler(async (req, res) => {
+    const result = await this.service.reserveListing(
+      req.params.id,
+      req.user.userId,
+      req.body || {}
+    );
+    return ApiResponse.created(res, result, 'Listing reserved successfully');
+  });
+
+  /**
+   * Release an active reservation
+   * POST /api/v1/listings/:id/release
+   */
+  release = asyncHandler(async (req, res) => {
+    const result = await this.service.releaseReservation(
+      req.params.id,
+      req.user.userId,
+      req.user.role,
+      req.body?.reason
+    );
+    return ApiResponse.success(res, result, 'Reservation released successfully');
+  });
 }
 
 export const listingController = new ListingController();

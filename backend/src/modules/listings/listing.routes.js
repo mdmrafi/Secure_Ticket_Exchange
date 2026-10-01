@@ -7,6 +7,8 @@ import {
   updateListingSchema,
   queryListingsSchema,
   listingIdParamSchema,
+  reserveListingSchema,
+  releaseListingSchema,
 } from './listing.validation.js';
 
 const router = Router();
@@ -20,5 +22,7 @@ router.use(authenticate);
 router.post('/', validate(createListingSchema), listingController.create);
 router.patch('/:id', validate(updateListingSchema), listingController.update);
 router.delete('/:id', validate(listingIdParamSchema), listingController.delete);
+router.post('/:id/reserve', validate(reserveListingSchema), listingController.reserve);
+router.post('/:id/release', validate(releaseListingSchema), listingController.release);
 
 export const listingRoutes = router;
