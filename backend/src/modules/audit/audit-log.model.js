@@ -24,6 +24,7 @@ const auditLogSchema = new mongoose.Schema(
         'TRANSFER',
         'FRAUD',
         'REPORT',
+        'VERIFICATION',
         'SYSTEM',
       ],
       index: true,
