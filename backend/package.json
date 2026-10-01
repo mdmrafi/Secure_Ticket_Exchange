@@ -16,7 +16,8 @@
     "test:reservation": "node scripts/test-atomic-reservation.js",
     "test:transactions": "node scripts/test-transaction-system.js",
     "test:transfers": "node scripts/test-transfer-workflow.js",
-    "test:fraud": "node scripts/test-fraud-detection.js"
+    "test:fraud": "node scripts/test-fraud-detection.js",
+    "test:messaging": "node scripts/test-socket-messaging.js"
   },
 
   "keywords": [
@@ -49,6 +50,7 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.9",
-    "pino-pretty": "^13.0.0"
+    "pino-pretty": "^13.0.0",
+    "socket.io-client": "^4.8.4"
   }
 }

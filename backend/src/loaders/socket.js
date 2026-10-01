@@ -1,6 +1,8 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { corsOptions } from '../config/cors.config.js';
 import { logger } from '../config/logger.config.js';
+import { socketAuthMiddleware } from '../modules/messages/socket/socket-auth.middleware.js';
+import { registerSocketHandler, isUserOnline } from '../modules/messages/socket/socket-handler.js';
 
 let ioInstance = null;
 
@@ -11,28 +13,17 @@ export const initSocketIO = (httpServer) => {
     pingInterval: 25000,
   });
 
+  // Strict Authentication Middleware (Verifies JWT and extracts identity)
+  io.use(socketAuthMiddleware);
+
   io.on('connection', (socket) => {
-    logger.info({ socketId: socket.id }, 'Socket client connected');
+    logger.info(
+      { socketId: socket.id, userId: socket.user?.userId },
+      'Authenticated Socket.IO client connected'
+    );
 
-    // Authenticated user room join
-    socket.on('user:join', (userId) => {
-      if (userId) {
-        socket.join(`user:${userId}`);
-        logger.debug({ socketId: socket.id, userId }, 'User joined personal room');
-      }
-    });
-
-    // Exchange transaction room join for real-time escrow chat & status updates
-    socket.on('transaction:join', (transactionId) => {
-      if (transactionId) {
-        socket.join(`tx:${transactionId}`);
-        logger.debug({ socketId: socket.id, transactionId }, 'User joined transaction room');
-      }
-    });
-
-    socket.on('disconnect', (reason) => {
-      logger.info({ socketId: socket.id, reason }, 'Socket client disconnected');
-    });
+    // Register authenticated chat and presence handlers
+    registerSocketHandler(io, socket);
   });
 
   ioInstance = io;
@@ -42,3 +33,6 @@ export const initSocketIO = (httpServer) => {
 export const getSocketIO = () => {
   return ioInstance;
 };
+
+export { isUserOnline };
+
