@@ -5,31 +5,95 @@
     --font-sans:
       'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
       sans-serif;
+    --color-brand-navy: #0b1120;
+    --color-brand-surface: #111a2e;
+    --color-brand-card: #15213a;
+    --color-brand-border: #203152;
+    --color-brand-blue: #2563eb;
+    --color-brand-verified: #10b981;
+    --color-brand-warning: #f59e0b;
+    --color-brand-danger: #ef4444;
   }
 
   body {
     margin: 0;
     font-family: var(--font-sans);
-    background-color: #0b0f19;
-    color: #f3f4f6;
+    background-color: #0b1120;
+    color: #f8fafc;
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
+    selection-background-color: #2563eb;
+    selection-color: #ffffff;
+  }
+
+  /* Accessibility focus visible rings */
+  *:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
   }
 }
 
-/* Glassmorphism & Custom styling utility classes */
-.glass-panel {
-  background: rgba(17, 24, 39, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* Reusable surface styling utilities */
+.surface-card {
+  background-color: #111a2e;
+  border: 1px solid #1e2c47;
+  border-radius: 1rem;
 }
 
-.glass-card {
-  background: rgba(23, 32, 54, 0.6);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+.surface-card-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.gradient-glow {
-  background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+.surface-card-hover:hover {
+  background-color: #15223c;
+  border-color: #2b3e64;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5);
+}
+
+/* Subtle glow accents */
+.blue-glow {
+  box-shadow: 0 0 30px -5px rgba(37, 99, 235, 0.2);
+}
+
+.emerald-glow {
+  box-shadow: 0 0 30px -5px rgba(16, 185, 129, 0.2);
+}
+
+/* Verification scan-line animation for OCR simulation */
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(500%);
+    opacity: 0;
+  }
+}
+
+.animate-scan {
+  animation: scanline 2.5s ease-in-out infinite;
+}
+
+/* Custom sleek scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0b1120;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e2c47;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334a75;
 }
